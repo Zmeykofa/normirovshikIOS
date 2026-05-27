@@ -1,0 +1,22 @@
+{
+  "short_name": "Нормировщик",
+  "name": "Нормировщик — Приложение для хронометража",
+  "description": "Приложение для хронометража рабочих процессов и учета рабочего времени на строительных объектах.",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#121214",
+  "theme_color": "#6200ee",
+  "display": "standalone",
+  "orientation": "portrait"
+}

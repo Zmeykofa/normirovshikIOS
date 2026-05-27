@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <!-- Оптимальный viewport для мобильных экранов с учетом безопасных зон iOS (вырезы под камеру) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Нормировщик</title>
+  
+  <!-- Поддержка PWA на iOS (Крайне важно для iPhone!) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Нормировщик">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  
+  <!-- Ссылка на веб-манифест -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121214">
+
+  <!-- Стили приложения -->
+  <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- Подключение Google Fonts и иконок -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+  
+  <!-- Библиотека SheetJS для генерации Excel (.xlsx) прямо на клиенте -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Затемнение для мобильного бокового меню -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <!-- БОКОВОЙ ДИЗАЙН-МЕНЮ (Список дней) -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <span class="material-icons-outlined logo-icon">date_range</span>
+        <h2>Список дней</h2>
+      </div>
+      <div id="daysListContainer" class="days-list-container">
+        <!-- Сюда динамически рендерятся дни -->
+      </div>
+      <div class="sidebar-footer">
+        <button id="addDayBtn" class="btn btn-primary">
+          <span class="material-icons-outlined">add</span> Добавить день
+        </button>
+      </div>
+    </aside>
+
+    <!-- ГЛАВНАЯ ОБЛАСТЬ ПРИЛОЖЕНИЯ -->
+    <main class="main-content">
+      
+      <!-- Шапка (Header) -->
+      <header class="header">
+        <div class="header-left">
+          <button id="menuToggleBtn" class="menu-toggle-btn">
+            <span class="material-icons-outlined">menu</span>
+          </button>
+          <h1 id="headerTitle" class="header-title">Нормировщик</h1>
+        </div>
+        <div class="header-actions">
+          <!-- Навигатор незавершенных операций (Chip) -->
+          <div id="unfinishedNavigator" class="unfinished-chip" style="display: none;">
+            <span class="material-icons-outlined">navigate_next</span>
+            <span id="unfinishedStatusText">0/0</span>
+          </div>
+          <!-- Кнопка сохранения в Excel -->
+          <button id="exportExcelBtn" class="export-btn" title="Сохранить отчет в Excel">
+            <span class="material-icons-outlined">save_alt</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Рабочий холст со скроллом -->
+      <div id="scrollContainer" class="scroll-container">
+        
+        <!-- Карточка паспорта дня -->
+        <section id="dayPassportCard" class="day-passport-card" style="display: none;">
+          <div id="passportHeader" class="passport-header">
+            <div class="passport-header-title">
+              <span class="material-icons-outlined">assignment</span>
+              <span>Паспорт дня</span>
+            </div>
+            <button id="passportToggleBtn" class="passport-toggle-btn">
+              <span class="material-icons-outlined">expand_less</span>
+            </button>
+          </div>
+          
+          <div id="passportBody" class="passport-body">
+            <div class="passport-grid">
+              <div class="passport-field">
+                <span class="label">Место проведения</span>
+                <span id="pLocation" class="value">—</span>
+              </div>
+              <div class="passport-field">
+                <span class="label">Объект</span>
+                <span id="pObjectName" class="value">—</span>
+              </div>
+              <div class="passport-field">
+                <span class="label">Организация</span>
+                <span id="pOrganization" class="value">—</span>
+              </div>
+              <div class="passport-field">
+                <span class="label">Вид работ</span>
+                <span id="pWorkType" class="value">—</span>
+              </div>
+              <div class="passport-field">
+                <span class="label">Техпроцесс</span>
+                <span id="pProcessName" class="value">—</span>
+              </div>
+              <div class="passport-field">
+                <span class="label">Документы</span>
+                <span id="pDocsInfo" class="value">—</span>
+              </div>
+              <div class="passport-field">
+                <span class="label">Бригада №</span>
+                <span id="pBrigadeNumber" class="value">—</span>
+              </div>
+              <div class="passport-field">
+                <span class="label">Бригадир</span>
+                <span id="pBrigadeLeader" class="value">—</span>
+              </div>
+            </div>
+            
+            <div class="passport-resources">
+              <div class="resource-row">
+                <span class="label">Исполнители (шаблон)</span>
+                <div id="pWorkersTags" class="resource-tags">—</div>
+              </div>
+              <div class="resource-row">
+                <span class="label">Инструменты (шаблон)</span>
+                <div id="pToolsTags" class="resource-tags">—</div>
+              </div>
+              <div class="resource-row">
+                <span class="label">Техника (шаблон)</span>
+                <div id="pEquipmentTags" class="resource-tags">—</div>
+              </div>
+              <div class="resource-row">
+                <span class="label">Материалы (шаблон)</span>
+                <div id="pMaterialsTags" class="resource-tags">—</div>
+              </div>
+            </div>
+            
+            <div class="passport-actions">
+              <button id="editPassportBtn" class="btn btn-text">
+                <span class="material-icons-outlined">edit</span> Редактировать паспорт
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Раздел Хронометража (Список операций) -->
+        <section class="operations-section">
+          <div class="operations-header">
+            <h3>Хронометраж</h3>
+            <span id="operationsCount" class="operations-count">0</span>
+          </div>
+          
+          <div id="operationsList" class="operations-list">
+            <!-- Сюда динамически рендерятся операции -->
+          </div>
+
+          <!-- Пустое состояние -->
+          <div id="emptyOperationsState" class="empty-state">
+            <span class="material-icons-outlined">history_toggle_off</span>
+            <p>Нет зарегистрированных операций за этот день</p>
+            <button id="emptyAddOpBtn" class="btn btn-primary">
+              <span class="material-icons-outlined">add</span> Добавить первую операцию
+            </button>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Кнопка быстрого добавления операции (Floating Action Button) -->
+      <button id="fabAddOperation" class="fab" style="display: none;">
+        <span class="material-icons-outlined">add</span>
+        <span>Операция</span>
+      </button>
+
+    </main>
+  </div>
+
+  <!-- ================= ДИАЛОГИ / МОДАЛЬНЫЕ ОКНА ================= -->
+
+  <!-- 1. Диалог добавления нового дня -->
+  <div id="addDayModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Новый день</h3>
+        <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
+      </div>
+      <div class="form-group">
+        <label for="newDayNameInput">Название дня</label>
+        <input type="text" id="newDayNameInput" class="form-input" placeholder="Например, 27 мая 2026">
+      </div>
+      <div class="form-group">
+        <label for="copySourceDaySelect">Скопировать списки ресурсов из:</label>
+        <select id="copySourceDaySelect" class="form-input">
+          <option value="">Не копировать (пустой)</option>
+          <!-- Опции подгружаются динамически -->
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-text cancel-btn">Отмена</button>
+        <button id="confirmAddDayBtn" class="btn btn-primary">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Диалог переименования дня -->
+  <div id="renameDayModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Переименовать день</h3>
+        <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
+      </div>
+      <div class="form-group">
+        <label for="renameDayInput">Название дня</label>
+        <input type="text" id="renameDayInput" class="form-input">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-text cancel-btn">Отмена</button>
+        <button id="confirmRenameDayBtn" class="btn btn-primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Диалог удаления дня -->
+  <div id="deleteDayModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Удалить день</h3>
+        <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
+      </div>
+      <p id="deleteDayMessage">Вы уверены, что хотите удалить этот день?</p>
+      <div class="modal-actions">
+        <button class="btn btn-text cancel-btn">Отмена</button>
+        <button id="confirmDeleteDayBtn" class="btn btn-danger">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Диалог редактирования паспорта дня -->
+  <div id="editPassportModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Редактирование паспорта дня</h3>
+        <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
+      </div>
+      <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label for="epLocation">Место проведения</label>
+          <input type="text" id="epLocation" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="epObjectName">Объект</label>
+          <input type="text" id="epObjectName" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="epOrganization">Организация</label>
+          <input type="text" id="epOrganization" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="epWorkType">Вид работ</label>
+          <input type="text" id="epWorkType" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="epProcessName">Техпроцесс</label>
+          <input type="text" id="epProcessName" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="epDocsInfo">Документы</label>
+          <input type="text" id="epDocsInfo" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="epBrigadeNumber">Бригада №</label>
+          <input type="text" id="epBrigadeNumber" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="epBrigadeLeader">Бригадир</label>
+          <input type="text" id="epBrigadeLeader" class="form-input">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="epWorkersList">Исполнители (через запятую)</label>
+        <textarea id="epWorkersList" class="form-input" rows="2" placeholder="Иванов И.И., Петров П.П."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="epToolsList">Инструменты (через запятую)</label>
+        <input type="text" id="epToolsList" class="form-input" placeholder="Шуруповерт, Перфоратор">
+      </div>
+      <div class="form-group">
+        <label for="epEquipmentList">Техника (через запятую)</label>
+        <input type="text" id="epEquipmentList" class="form-input" placeholder="Экскаватор, Самосвал">
+      </div>
+      <div class="form-group">
+        <label for="epMaterialsList">Материалы (через запятую)</label>
+        <input type="text" id="epMaterialsList" class="form-input" placeholder="Бетон B25, Арматура d12">
+      </div>
+      
+      <div class="modal-actions">
+        <button class="btn btn-text cancel-btn">Отмена</button>
+        <button id="savePassportBtn" class="btn btn-primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Диалог редактирования операции с табами (содержит управление БД сотрудников!) -->
+  <div id="editOperationModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="editOperationModalTitle">Редактирование операции</h3>
+        <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
+      </div>
+      
+      <!-- Вкладки (Tabs) -->
+      <div class="tab-header">
+        <button id="tabMainBtn" class="tab-btn active">Основное</button>
+        <button id="tabStaffBtn" class="tab-btn">База исполнителей</button>
+      </div>
+      
+      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 1: Основное -->
+      <div id="tabContentMain" class="tab-content active">
+        <div class="form-group">
+          <label for="eoName">Название операции</label>
+          <input type="text" id="eoName" class="form-input">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="eoPeople">Количество людей</label>
+            <input type="number" id="eoPeople" class="form-input" min="0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Исполнители (Мультиселект из БД)</label>
+          <div id="eoWorkersContainer" class="multiselect-container">
+            <!-- Подгружается динамически -->
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="eoTools">Инструменты (выберите из шаблонов или введите)</label>
+          <input type="text" id="eoTools" class="form-input" placeholder="Шуруповерт">
+          <div id="eoToolsTemplates" class="resource-tags" style="margin-top: 4px;"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="eoEquipment">Техника и машинисты (выберите из шаблонов или введите)</label>
+          <input type="text" id="eoEquipment" class="form-input" placeholder="Экскаватор=Иванов, Самосвал=Петров">
+          <div id="eoEquipmentTemplates" class="resource-tags" style="margin-top: 4px;"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="eoMaterials">Материалы (выберите из шаблонов или введите)</label>
+          <input type="text" id="eoMaterials" class="form-input" placeholder="Бетон B25">
+          <div id="eoMaterialsTemplates" class="resource-tags" style="margin-top: 4px;"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="eoNotes">Заметки</label>
+          <textarea id="eoNotes" class="form-input" rows="2"></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-text cancel-btn">Отмена</button>
+          <button id="saveOperationBtn" class="btn btn-primary">Сохранить</button>
+        </div>
+      </div>
+
+      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 2: База сотрудников -->
+      <div id="tabContentStaff" class="tab-content">
+        <div class="staff-management">
+          <div class="staff-management-header">
+            <h4>Список сотрудников в БД</h4>
+          </div>
+          
+          <div class="staff-table-container">
+            <table class="staff-table">
+              <thead>
+                <tr>
+                  <th>Имя</th>
+                  <th>Должность</th>
+                  <th>Разряд</th>
+                  <th>Действие</th>
+                </tr>
+              </thead>
+              <tbody id="staffTableBody">
+                <!-- Заполняется JS -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="staff-management-header" style="margin-top: 8px;">
+            <h4>Добавить в базу</h4>
+          </div>
+          
+          <div class="staff-add-form">
+            <input type="text" id="newStaffName" class="form-input" placeholder="ФИО (например, Иванов И.И.)">
+            <input type="text" id="newStaffPosition" class="form-input" placeholder="Должность">
+            <input type="text" id="newStaffGrade" class="form-input" placeholder="Разряд">
+            <button id="addStaffBtn" class="btn btn-primary" style="padding: 10px;"><span class="material-icons-outlined">add</span></button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 6. Диалог удаления операции -->
+  <div id="deleteOperationModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Удалить операцию</h3>
+        <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
+      </div>
+      <p id="deleteOperationMessage">Вы уверены, что хотите удалить эту операцию?</p>
+      <div class="modal-actions">
+        <button class="btn btn-text cancel-btn">Отмена</button>
+        <button id="confirmDeleteOperationBtn" class="btn btn-danger">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Скрипты приложения -->
+  <script src="js/db.js"></script>
+  <script src="js/excel.js"></script>
+  <script src="js/app.js"></script>
+  
+  <script>
+    // Регистрация Service Worker для оффлайн работы PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker успешно зарегистрирован!', reg.scope))
+          .catch(err => console.log('Ошибка регистрации Service Worker:', err));
+      });
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "normirovshik-pwa",
+  "version": "1.0.0",
+  "description": "Progressive Web App version of Normirovshik construction timing application.",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx -y http-server -p 8080 -c-1"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
