@@ -41,9 +41,12 @@
       <div id="daysListContainer" class="days-list-container">
         <!-- Сюда динамически рендерятся дни -->
       </div>
-      <div class="sidebar-footer">
+      <div class="sidebar-footer" style="display: flex; flex-direction: column; gap: 8px;">
         <button id="addDayBtn" class="btn btn-primary">
           <span class="material-icons-outlined">add</span> Добавить день
+        </button>
+        <button id="openDirectoriesBtn" class="btn btn-text" style="width: 100%;">
+          <span class="material-icons-outlined">storage</span> Справочники БД
         </button>
       </div>
     </aside>
@@ -308,25 +311,15 @@
     </div>
   </div>
 
-  <!-- 5. Диалог редактирования операции с табами (содержит управление БД сотрудников!) -->
+  <!-- 5. Диалог редактирования операции (Чистый и компактный) -->
   <div id="editOperationModal" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content" style="max-height: 85vh;">
       <div class="modal-header">
         <h3 id="editOperationModalTitle">Редактирование операции</h3>
         <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
       </div>
       
-      <!-- Вкладки (Tabs) -->
-      <div class="tab-header">
-        <button id="tabMainBtn" class="tab-btn active">Основное</button>
-        <button id="tabStaffBtn" class="tab-btn">Рабочие</button>
-        <button id="tabToolsBtn" class="tab-btn">Инструменты</button>
-        <button id="tabEquipmentBtn" class="tab-btn">Техника</button>
-        <button id="tabMaterialsBtn" class="tab-btn">Материалы</button>
-      </div>
-      
-      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 1: Основное -->
-      <div id="tabContentMain" class="tab-content active">
+      <div class="tab-content active" style="display: flex; flex-direction: column; gap: 12px;">
         <div class="form-group">
           <label for="eoName">Название операции</label>
           <input type="text" id="eoName" class="form-input">
@@ -386,9 +379,28 @@
           <button id="saveOperationBtn" class="btn btn-primary">Сохранить</button>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 2: База сотрудников -->
-      <div id="tabContentStaff" class="tab-content">
+  <!-- 5а. Глобальный диалог управления справочниками БД -->
+  <div id="directoriesModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 600px; max-height: 85vh;">
+      <div class="modal-header">
+        <h3>Справочники базы данных</h3>
+        <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
+      </div>
+      
+      <!-- Вкладки справочников -->
+      <div class="tab-header">
+        <button id="dirTabStaffBtn" class="tab-btn active">Рабочие</button>
+        <button id="dirTabToolsBtn" class="tab-btn">Инструменты</button>
+        <button id="dirTabEquipmentBtn" class="tab-btn">Техника</button>
+        <button id="dirTabMaterialsBtn" class="tab-btn">Материалы</button>
+      </div>
+
+      <!-- Содержимое вкладок -->
+      <!-- Вкладка 1: Рабочие -->
+      <div id="dirTabContentStaff" class="tab-content active">
         <div class="staff-management">
           <div class="staff-management-header">
             <h4>Список сотрудников в БД</h4>
@@ -423,8 +435,8 @@
         </div>
       </div>
 
-      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 3: База инструментов -->
-      <div id="tabContentTools" class="tab-content">
+      <!-- Вкладка 2: Инструменты -->
+      <div id="dirTabContentTools" class="tab-content">
         <div class="staff-management">
           <div class="staff-management-header">
             <h4>База инструментов</h4>
@@ -455,8 +467,8 @@
         </div>
       </div>
 
-      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 4: База техники -->
-      <div id="tabContentEquipment" class="tab-content">
+      <!-- Вкладка 3: Техника -->
+      <div id="dirTabContentEquipment" class="tab-content">
         <div class="staff-management">
           <div class="staff-management-header">
             <h4>База спецтехники</h4>
@@ -487,8 +499,8 @@
         </div>
       </div>
 
-      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 5: База материалов -->
-      <div id="tabContentMaterials" class="tab-content">
+      <!-- Вкладка 4: Материалы -->
+      <div id="dirTabContentMaterials" class="tab-content">
         <div class="staff-management">
           <div class="staff-management-header">
             <h4>База строительных материалов</h4>
@@ -518,6 +530,12 @@
           </div>
         </div>
       </div>
+
+      <div class="modal-actions" style="margin-top: 16px;">
+        <button class="btn btn-primary cancel-btn" style="width: 100%;">Готово</button>
+      </div>
+    </div>
+  </div>
 
     </div>
   </div>

@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     headerTitle: document.getElementById("headerTitle"),
     daysListContainer: document.getElementById("daysListContainer"),
     addDayBtn: document.getElementById("addDayBtn"),
+    openDirectoriesBtn: document.getElementById("openDirectoriesBtn"),
     
     // Паспорт дня
     dayPassportCard: document.getElementById("dayPassportCard"),
@@ -84,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     editPassportModal: document.getElementById("editPassportModal"),
     savePassportBtn: document.getElementById("savePassportBtn"),
     
-    // Диалоги операций
+    // Диалог операции (Чистый и компактный)
     editOperationModal: document.getElementById("editOperationModal"),
     editOperationModalTitle: document.getElementById("editOperationModalTitle"),
     eoName: document.getElementById("eoName"),
@@ -106,18 +107,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     deleteOperationMessage: document.getElementById("deleteOperationMessage"),
     confirmDeleteOperationBtn: document.getElementById("confirmDeleteOperationBtn"),
     
-    // Табы внутри редактирования операции
-    tabMainBtn: document.getElementById("tabMainBtn"),
-    tabStaffBtn: document.getElementById("tabStaffBtn"),
-    tabToolsBtn: document.getElementById("tabToolsBtn"),
-    tabEquipmentBtn: document.getElementById("tabEquipmentBtn"),
-    tabMaterialsBtn: document.getElementById("tabMaterialsBtn"),
+    // Глобальный диалог справочников
+    directoriesModal: document.getElementById("directoriesModal"),
+    dirTabStaffBtn: document.getElementById("dirTabStaffBtn"),
+    dirTabToolsBtn: document.getElementById("dirTabToolsBtn"),
+    dirTabEquipmentBtn: document.getElementById("dirTabEquipmentBtn"),
+    dirTabMaterialsBtn: document.getElementById("dirTabMaterialsBtn"),
     
-    tabContentMain: document.getElementById("tabContentMain"),
-    tabContentStaff: document.getElementById("tabContentStaff"),
-    tabContentTools: document.getElementById("tabContentTools"),
-    tabContentEquipment: document.getElementById("tabContentEquipment"),
-    tabContentMaterials: document.getElementById("tabContentMaterials"),
+    dirTabContentStaff: document.getElementById("dirTabContentStaff"),
+    dirTabContentTools: document.getElementById("dirTabContentTools"),
+    dirTabContentEquipment: document.getElementById("dirTabContentEquipment"),
+    dirTabContentMaterials: document.getElementById("dirTabContentMaterials"),
     
     // Справочник: Сотрудники
     staffTableBody: document.getElementById("staffTableBody"),
@@ -226,7 +226,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const id = Number(e.currentTarget.dataset.id);
         await state.db.deleteStaff(id);
         await loadStaff();
-        renderWorkersMultiselect();
+        
+        // Синхронизируем: если открыта модалка редактирования операции, перерисовываем чекбоксы
+        if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+          const op = state.operations.find(o => o.id === state.editingOperationId);
+          renderWorkersMultiselect(op ? op.workers : "");
+        }
       });
       
       DOM.staffTableBody.appendChild(tr);
@@ -249,7 +254,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.newStaffGrade.value = "";
     
     await loadStaff();
-    renderWorkersMultiselect();
+    
+    if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+      const op = state.operations.find(o => o.id === state.editingOperationId);
+      renderWorkersMultiselect(op ? op.workers : "");
+    }
   });
 
   // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ ИНСТРУМЕНТОВ (Tools Database) ---
@@ -279,7 +288,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         const id = Number(e.currentTarget.dataset.id);
         await state.db.deleteTool(id);
         await loadTools();
-        renderToolsMultiselect();
+        
+        if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+          const op = state.operations.find(o => o.id === state.editingOperationId);
+          renderToolsMultiselect(op ? op.tools : "");
+        }
       });
       
       DOM.toolsTableBody.appendChild(tr);
@@ -295,7 +308,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     await state.db.addTool({ name });
     DOM.newToolName.value = "";
     await loadTools();
-    renderToolsMultiselect();
+    
+    if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+      const op = state.operations.find(o => o.id === state.editingOperationId);
+      renderToolsMultiselect(op ? op.tools : "");
+    }
   });
 
   // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ ТЕХНИКИ (Equipment Database) ---
@@ -325,7 +342,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         const id = Number(e.currentTarget.dataset.id);
         await state.db.deleteEquipment(id);
         await loadEquipment();
-        renderEquipmentMultiselect();
+        
+        if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+          const op = state.operations.find(o => o.id === state.editingOperationId);
+          renderEquipmentMultiselect(op ? op.equipment : "");
+        }
       });
       
       DOM.equipmentTableBody.appendChild(tr);
@@ -341,7 +362,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     await state.db.addEquipment({ name });
     DOM.newEquipmentName.value = "";
     await loadEquipment();
-    renderEquipmentMultiselect();
+    
+    if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+      const op = state.operations.find(o => o.id === state.editingOperationId);
+      renderEquipmentMultiselect(op ? op.equipment : "");
+    }
   });
 
   // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ МАТЕРИАЛОВ (Materials Database) ---
@@ -371,7 +396,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         const id = Number(e.currentTarget.dataset.id);
         await state.db.deleteMaterial(id);
         await loadMaterials();
-        renderMaterialsMultiselect();
+        
+        if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+          const op = state.operations.find(o => o.id === state.editingOperationId);
+          renderMaterialsMultiselect(op ? op.materials : "");
+        }
       });
       
       DOM.materialsTableBody.appendChild(tr);
@@ -387,7 +416,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     await state.db.addMaterial({ name });
     DOM.newMaterialName.value = "";
     await loadMaterials();
-    renderMaterialsMultiselect();
+    
+    if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+      const op = state.operations.find(o => o.id === state.editingOperationId);
+      renderMaterialsMultiselect(op ? op.materials : "");
+    }
   });
 
   // --- УПРАВЛЕНИЕ ДНЯМИ (Days Logic) ---
@@ -817,8 +850,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.editingOperationId = op.id;
     DOM.editOperationModalTitle.textContent = `Редактирование: ${escapeHtml(op.name)}`;
     
-    switchTab("main");
-    
     DOM.eoName.value = op.name || "";
     DOM.eoPeople.value = op.people || 0;
     DOM.eoNotes.value = op.notes || "";
@@ -902,7 +933,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.eoWorkersContainer.innerHTML = "";
     
     if (state.staff.length === 0) {
-      DOM.eoWorkersContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База исполнителей пуста. Перейдите во вкладку "Рабочие" чтобы добавить людей.</div>`;
+      DOM.eoWorkersContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База исполнителей пуста. Перейдите в "Справочники БД" в боковом меню, чтобы добавить людей.</div>`;
       return;
     }
     
@@ -937,7 +968,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.eoToolsContainer.innerHTML = "";
     
     if (state.tools.length === 0) {
-      DOM.eoToolsContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База инструментов пуста. Перейдите во вкладку "Инструменты" чтобы наполнить.</div>`;
+      DOM.eoToolsContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База инструментов пуста. Перейдите в "Справочники БД" в боковом меню, чтобы добавить.</div>`;
       return;
     }
     
@@ -967,7 +998,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.eoMaterialsContainer.innerHTML = "";
     
     if (state.materials.length === 0) {
-      DOM.eoMaterialsContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База материалов пуста. Перейдите во вкладку "Материалы" чтобы наполнить.</div>`;
+      DOM.eoMaterialsContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База материалов пуста. Перейдите в "Справочники БД" в боковом меню, чтобы добавить.</div>`;
       return;
     }
     
@@ -997,11 +1028,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.eoEquipmentContainer.innerHTML = "";
     
     if (state.equipment.length === 0) {
-      DOM.eoEquipmentContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База спецтехники пуста. Перейдите во вкладку "Техника" чтобы наполнить.</div>`;
+      DOM.eoEquipmentContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База спецтехники пуста. Перейдите в "Справочники БД" в боковом меню, чтобы добавить.</div>`;
       return;
     }
     
-    // Парсим строку вида "Excavator=Ivanov, Crane, Truck=Petrov"
     const selectedMap = {};
     if (selectedEquipmentString) {
       selectedEquipmentString.split(",").map(x => x.trim()).forEach(item => {
@@ -1027,7 +1057,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <input type="checkbox" data-name="${escapeHtml(eq.name)}" ${isSelected ? "checked" : ""}>
           <div><strong>${escapeHtml(eq.name)}</strong></div>
         </div>
-        <input type="text" class="form-input machinist-input" placeholder="Машинист" style="padding:4px 8px; font-size:0.8rem; width:130px; display:${isSelected ? 'block' : 'none'}; margin-left:10px;" value="${escapeHtml(initialDriver)}">
+        <input type="text" class="form-input machinist-input" placeholder="Машинист" style="padding:4px 8px; font-size:0.8rem; width:120px; display:${isSelected ? 'block' : 'none'}; margin-left:10px;" value="${escapeHtml(initialDriver)}">
       `;
       
       const checkbox = label.querySelector("input[type='checkbox']");
@@ -1039,9 +1069,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (checkbox.checked) textInput.focus();
       });
       
-      // Запрещаем закрытие окна или срабатывание чекбокса при клике на текстовый ввод машиниста
       textInput.addEventListener("click", (e) => e.stopPropagation());
-      
       DOM.eoEquipmentContainer.appendChild(label);
     });
   }
@@ -1100,12 +1128,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     closeModal(DOM.editOperationModal);
   });
 
-  // --- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК (Tab Switcher) ---
-  function switchTab(tab) {
-    const tabs = ["main", "staff", "tools", "equipment", "materials"];
+  // --- УПРАВЛЕНИЕ ГЛОБАЛЬНЫМИ СПРАВОЧНИКАМИ БД ---
+  DOM.openDirectoriesBtn.addEventListener("click", () => {
+    switchDirTab("staff");
+    openModal(DOM.directoriesModal);
+    closeMobileSidebar();
+  });
+
+  function switchDirTab(tab) {
+    const tabs = ["staff", "tools", "equipment", "materials"];
     tabs.forEach(t => {
-      const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
-      const content = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      const btn = document.getElementById(`dirTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
+      const content = document.getElementById(`dirTabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
       
       if (btn && content) {
         if (t === tab) {
@@ -1119,11 +1153,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  DOM.tabMainBtn.addEventListener("click", () => switchTab("main"));
-  DOM.tabStaffBtn.addEventListener("click", () => switchTab("staff"));
-  DOM.tabToolsBtn.addEventListener("click", () => switchTab("tools"));
-  DOM.tabEquipmentBtn.addEventListener("click", () => switchTab("equipment"));
-  DOM.tabMaterialsBtn.addEventListener("click", () => switchTab("materials"));
+  DOM.dirTabStaffBtn.addEventListener("click", () => switchDirTab("staff"));
+  DOM.dirTabToolsBtn.addEventListener("click", () => switchDirTab("tools"));
+  DOM.dirTabEquipmentBtn.addEventListener("click", () => switchDirTab("equipment"));
+  DOM.dirTabMaterialsBtn.addEventListener("click", () => switchDirTab("materials"));
 
   // --- ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ ОПЕРАЦИИ ---
   DOM.confirmDeleteOperationBtn.addEventListener("click", async () => {
