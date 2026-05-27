@@ -479,6 +479,7 @@
               <thead>
                 <tr>
                   <th>Название машины</th>
+                  <th>Машинист по умолчанию</th>
                   <th>Действие</th>
                 </tr>
               </thead>
@@ -492,9 +493,10 @@
             <h4>Добавить в базу</h4>
           </div>
           
-          <div class="staff-add-form">
+          <div class="staff-add-form" style="display: flex; flex-direction: column; gap: 8px;">
             <input type="text" id="newEquipmentName" class="form-input" placeholder="Название техники (например, Экскаватор JCB)">
-            <button id="addEquipmentBtn" class="btn btn-primary" style="padding: 10px;"><span class="material-icons-outlined">add</span></button>
+            <input type="text" id="newEquipmentMachinist" class="form-input" placeholder="ФИО Машиниста по умолчанию (например, Иванов И.И.)">
+            <button id="addEquipmentBtn" class="btn btn-primary" style="width: 100%;"><span class="material-icons-outlined">add</span> Добавить технику</button>
           </div>
         </div>
       </div>
@@ -534,9 +536,6 @@
       <div class="modal-actions" style="margin-top: 16px;">
         <button class="btn btn-primary cancel-btn" style="width: 100%;">Готово</button>
       </div>
-    </div>
-  </div>
-
     </div>
   </div>
 

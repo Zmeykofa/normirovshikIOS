@@ -134,6 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Справочник: Техника
     equipmentTableBody: document.getElementById("equipmentTableBody"),
     newEquipmentName: document.getElementById("newEquipmentName"),
+    newEquipmentMachinist: document.getElementById("newEquipmentMachinist"),
     addEquipmentBtn: document.getElementById("addEquipmentBtn"),
     
     // Справочник: Материалы
@@ -324,13 +325,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderEquipmentTable() {
     DOM.equipmentTableBody.innerHTML = "";
     if (state.equipment.length === 0) {
-      DOM.equipmentTableBody.innerHTML = `<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">База спецтехники пуста. Добавьте записи ниже.</td></tr>`;
+      DOM.equipmentTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">База спецтехники пуста. Добавьте записи ниже.</td></tr>`;
       return;
     }
     state.equipment.forEach(item => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><strong>${escapeHtml(item.name)}</strong></td>
+        <td>${escapeHtml(item.machinist || "—")}</td>
         <td>
           <button class="eq-delete-btn" data-id="${item.id}">
             <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
@@ -355,12 +357,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   DOM.addEquipmentBtn.addEventListener("click", async () => {
     const name = DOM.newEquipmentName.value.trim();
+    const machinist = DOM.newEquipmentMachinist.value.trim();
     if (!name) {
       alert("Введите название спецтехники");
       return;
     }
-    await state.db.addEquipment({ name });
+    await state.db.addEquipment({ name, machinist });
     DOM.newEquipmentName.value = "";
+    DOM.newEquipmentMachinist.value = "";
     await loadEquipment();
     
     if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
@@ -1066,7 +1070,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       checkbox.addEventListener("change", () => {
         label.classList.toggle("selected", checkbox.checked);
         textInput.style.display = checkbox.checked ? "block" : "none";
-        if (checkbox.checked) textInput.focus();
+        if (checkbox.checked) {
+          if (!textInput.value.trim()) {
+            textInput.value = eq.machinist || "";
+          }
+          textInput.focus();
+        }
       });
       
       textInput.addEventListener("click", (e) => e.stopPropagation());
