@@ -1,4 +1,4 @@
-// Главная логика приложения "Нормировщик"
+// Главная логика PWA приложения "Нормировщик"
 
 document.addEventListener("DOMContentLoaded", async () => {
   // --- СОСТОЯНИЕ ПРИЛОЖЕНИЯ (State) ---
@@ -10,7 +10,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     operations: [],
     unfinishedOperations: [],
     currentUnfinishedIndex: 0,
+    
+    // Справочники баз данных (Persistent lists)
     staff: [],
+    tools: [],
+    equipment: [],
+    materials: [],
     
     // Вспомогательные ID для диалогов
     editingDayId: null,
@@ -62,7 +67,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     unfinishedNavigator: document.getElementById("unfinishedNavigator"),
     unfinishedStatusText: document.getElementById("unfinishedStatusText"),
     
-    // Диалоги
+    // Диалоги дней
     addDayModal: document.getElementById("addDayModal"),
     newDayNameInput: document.getElementById("newDayNameInput"),
     copySourceDaySelect: document.getElementById("copySourceDaySelect"),
@@ -79,11 +84,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     editPassportModal: document.getElementById("editPassportModal"),
     savePassportBtn: document.getElementById("savePassportBtn"),
     
+    // Диалоги операций
     editOperationModal: document.getElementById("editOperationModal"),
     editOperationModalTitle: document.getElementById("editOperationModalTitle"),
     eoName: document.getElementById("eoName"),
     eoPeople: document.getElementById("eoPeople"),
     eoWorkersContainer: document.getElementById("eoWorkersContainer"),
+    eoToolsContainer: document.getElementById("eoToolsContainer"),
+    eoEquipmentContainer: document.getElementById("eoEquipmentContainer"),
+    eoMaterialsContainer: document.getElementById("eoMaterialsContainer"),
     eoTools: document.getElementById("eoTools"),
     eoToolsTemplates: document.getElementById("eoToolsTemplates"),
     eoEquipment: document.getElementById("eoEquipment"),
@@ -100,30 +109,54 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Табы внутри редактирования операции
     tabMainBtn: document.getElementById("tabMainBtn"),
     tabStaffBtn: document.getElementById("tabStaffBtn"),
+    tabToolsBtn: document.getElementById("tabToolsBtn"),
+    tabEquipmentBtn: document.getElementById("tabEquipmentBtn"),
+    tabMaterialsBtn: document.getElementById("tabMaterialsBtn"),
+    
     tabContentMain: document.getElementById("tabContentMain"),
     tabContentStaff: document.getElementById("tabContentStaff"),
+    tabContentTools: document.getElementById("tabContentTools"),
+    tabContentEquipment: document.getElementById("tabContentEquipment"),
+    tabContentMaterials: document.getElementById("tabContentMaterials"),
     
-    // База сотрудников
+    // Справочник: Сотрудники
     staffTableBody: document.getElementById("staffTableBody"),
     newStaffName: document.getElementById("newStaffName"),
     newStaffPosition: document.getElementById("newStaffPosition"),
     newStaffGrade: document.getElementById("newStaffGrade"),
-    addStaffBtn: document.getElementById("addStaffBtn")
+    addStaffBtn: document.getElementById("addStaffBtn"),
+    
+    // Справочник: Инструменты
+    toolsTableBody: document.getElementById("toolsTableBody"),
+    newToolName: document.getElementById("newToolName"),
+    addToolBtn: document.getElementById("addToolBtn"),
+    
+    // Справочник: Техника
+    equipmentTableBody: document.getElementById("equipmentTableBody"),
+    newEquipmentName: document.getElementById("newEquipmentName"),
+    addEquipmentBtn: document.getElementById("addEquipmentBtn"),
+    
+    // Справочник: Материалы
+    materialsTableBody: document.getElementById("materialsTableBody"),
+    newMaterialName: document.getElementById("newMaterialName"),
+    addMaterialBtn: document.getElementById("addMaterialBtn")
   };
 
   // --- ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ---
   try {
     await state.db.init();
     
-    // Загружаем справочники
+    // Загружаем все справочники баз данных на старте
     await loadStaff();
+    await loadTools();
+    await loadEquipment();
+    await loadMaterials();
     
-    // Загружаем список дней
+    // Загружаем список дней хронометража
     await refreshDaysList();
     
     // Автовыбор последнего дня или открытие диалога создания
     if (state.days.length > 0) {
-      // Ищем ID последнего открытого дня из localStorage
       const lastDayId = localStorage.getItem("lastSelectedDayId");
       const foundDay = state.days.find(d => d.id === lastDayId);
       if (foundDay) {
@@ -132,7 +165,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         await selectDay(state.days[0].id);
       }
     } else {
-      // Если дней нет вообще, показываем модалку создания первого дня
       openModal(DOM.addDayModal);
       DOM.newDayNameInput.value = "Рабочая смена " + new Date().toLocaleDateString("ru-RU");
     }
@@ -147,7 +179,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   function startTickingInterval() {
     if (state.timerInterval) clearInterval(state.timerInterval);
     state.timerInterval = setInterval(() => {
-      // Находим на экране все активные операции и обновляем текстовое время
       const activeCards = document.querySelectorAll(".operation-card.active");
       activeCards.forEach(card => {
         const opId = card.dataset.id;
@@ -195,7 +226,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const id = Number(e.currentTarget.dataset.id);
         await state.db.deleteStaff(id);
         await loadStaff();
-        // Обновляем список мультиселекта в форме
         renderWorkersMultiselect();
       });
       
@@ -219,8 +249,145 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.newStaffGrade.value = "";
     
     await loadStaff();
-    // Обновляем список мультиселекта в форме
     renderWorkersMultiselect();
+  });
+
+  // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ ИНСТРУМЕНТОВ (Tools Database) ---
+  async function loadTools() {
+    state.tools = await state.db.getTools();
+    renderToolsTable();
+  }
+
+  function renderToolsTable() {
+    DOM.toolsTableBody.innerHTML = "";
+    if (state.tools.length === 0) {
+      DOM.toolsTableBody.innerHTML = `<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">База инструментов пуста. Добавьте записи ниже.</td></tr>`;
+      return;
+    }
+    state.tools.forEach(tool => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(tool.name)}</strong></td>
+        <td>
+          <button class="tool-delete-btn" data-id="${tool.id}">
+            <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
+          </button>
+        </td>
+      `;
+      
+      tr.querySelector(".tool-delete-btn").addEventListener("click", async (e) => {
+        const id = Number(e.currentTarget.dataset.id);
+        await state.db.deleteTool(id);
+        await loadTools();
+        renderToolsMultiselect();
+      });
+      
+      DOM.toolsTableBody.appendChild(tr);
+    });
+  }
+
+  DOM.addToolBtn.addEventListener("click", async () => {
+    const name = DOM.newToolName.value.trim();
+    if (!name) {
+      alert("Введите название инструмента");
+      return;
+    }
+    await state.db.addTool({ name });
+    DOM.newToolName.value = "";
+    await loadTools();
+    renderToolsMultiselect();
+  });
+
+  // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ ТЕХНИКИ (Equipment Database) ---
+  async function loadEquipment() {
+    state.equipment = await state.db.getEquipment();
+    renderEquipmentTable();
+  }
+
+  function renderEquipmentTable() {
+    DOM.equipmentTableBody.innerHTML = "";
+    if (state.equipment.length === 0) {
+      DOM.equipmentTableBody.innerHTML = `<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">База спецтехники пуста. Добавьте записи ниже.</td></tr>`;
+      return;
+    }
+    state.equipment.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(item.name)}</strong></td>
+        <td>
+          <button class="eq-delete-btn" data-id="${item.id}">
+            <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
+          </button>
+        </td>
+      `;
+      
+      tr.querySelector(".eq-delete-btn").addEventListener("click", async (e) => {
+        const id = Number(e.currentTarget.dataset.id);
+        await state.db.deleteEquipment(id);
+        await loadEquipment();
+        renderEquipmentMultiselect();
+      });
+      
+      DOM.equipmentTableBody.appendChild(tr);
+    });
+  }
+
+  DOM.addEquipmentBtn.addEventListener("click", async () => {
+    const name = DOM.newEquipmentName.value.trim();
+    if (!name) {
+      alert("Введите название спецтехники");
+      return;
+    }
+    await state.db.addEquipment({ name });
+    DOM.newEquipmentName.value = "";
+    await loadEquipment();
+    renderEquipmentMultiselect();
+  });
+
+  // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ МАТЕРИАЛОВ (Materials Database) ---
+  async function loadMaterials() {
+    state.materials = await state.db.getMaterials();
+    renderMaterialsTable();
+  }
+
+  function renderMaterialsTable() {
+    DOM.materialsTableBody.innerHTML = "";
+    if (state.materials.length === 0) {
+      DOM.materialsTableBody.innerHTML = `<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">База материалов пуста. Добавьте записи ниже.</td></tr>`;
+      return;
+    }
+    state.materials.forEach(mat => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(mat.name)}</strong></td>
+        <td>
+          <button class="mat-delete-btn" data-id="${mat.id}">
+            <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
+          </button>
+        </td>
+      `;
+      
+      tr.querySelector(".mat-delete-btn").addEventListener("click", async (e) => {
+        const id = Number(e.currentTarget.dataset.id);
+        await state.db.deleteMaterial(id);
+        await loadMaterials();
+        renderMaterialsMultiselect();
+      });
+      
+      DOM.materialsTableBody.appendChild(tr);
+    });
+  }
+
+  DOM.addMaterialBtn.addEventListener("click", async () => {
+    const name = DOM.newMaterialName.value.trim();
+    if (!name) {
+      alert("Введите название материала");
+      return;
+    }
+    await state.db.addMaterial({ name });
+    DOM.newMaterialName.value = "";
+    await loadMaterials();
+    renderMaterialsMultiselect();
   });
 
   // --- УПРАВЛЕНИЕ ДНЯМИ (Days Logic) ---
@@ -250,13 +417,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
       `;
       
-      // Выбор дня при клике на имя
       div.querySelector(".day-item-name").addEventListener("click", () => {
         selectDay(day.id);
         closeMobileSidebar();
       });
       
-      // Переименование дня
       div.querySelector(".edit-btn").addEventListener("click", (e) => {
         e.stopPropagation();
         state.editingDayId = day.id;
@@ -264,7 +429,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         openModal(DOM.renameDayModal);
       });
       
-      // Удаление дня
       div.querySelector(".delete-btn").addEventListener("click", (e) => {
         e.stopPropagation();
         state.deletingDayId = day.id;
@@ -290,21 +454,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.currentDay = await state.db.getDay(dayId);
     if (!state.currentDay) return;
     
-    // Запоминаем последний открытый день
     localStorage.setItem("lastSelectedDayId", dayId);
-    
     DOM.headerTitle.textContent = state.currentDay.name;
     
-    // Подсвечиваем в боковой панели
     document.querySelectorAll(".day-item").forEach(item => {
       item.classList.toggle("active", item.dataset.id === dayId);
     });
     
-    // Загружаем паспорт и операции дня
     renderPassport();
     await refreshOperations();
     
-    // Показываем паспорт и плавающую кнопку
     DOM.dayPassportCard.style.display = "block";
     DOM.fabAddOperation.style.display = "flex";
   }
@@ -323,7 +482,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.pBrigadeNumber.textContent = d.brigadeNumber || "—";
     DOM.pBrigadeLeader.textContent = d.brigadeLeader || "—";
     
-    // Рендер тегов списков ресурсов
     renderTags(DOM.pWorkersTags, d.workersList);
     renderTags(DOM.pToolsTags, d.toolsList);
     renderTags(DOM.pEquipmentTags, d.equipmentList);
@@ -349,7 +507,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Редактирование паспорта
   DOM.editPassportBtn.addEventListener("click", () => {
     const d = state.currentDay;
     if (!d) return;
@@ -397,7 +554,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     closeModal(DOM.editPassportModal);
   });
 
-  // Сворачивание / Разворачивание паспорта
   DOM.passportHeader.addEventListener("click", () => {
     const isCollapsed = DOM.passportBody.classList.toggle("collapsed");
     DOM.passportToggleBtn.querySelector("span").textContent = isCollapsed ? "expand_more" : "expand_less";
@@ -408,14 +564,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!state.currentDay) return;
     
     state.operations = await state.db.getOperations(state.currentDay.id);
-    
-    // Сортируем операции: активные сверху, затем остальные по времени начала
-    // (Поведение Jetpack Compose: обычно сортируют от новых к старым или по времени старта)
     state.operations.sort((a, b) => b.startEpoch - a.startEpoch);
     
     DOM.operationsCount.textContent = state.operations.length;
-    
-    // Обновляем список незавершенных операций для навигатора
     state.unfinishedOperations = state.operations.filter(op => op.stopEpoch === null);
     updateUnfinishedNavigator();
     
@@ -436,8 +587,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     state.operations.forEach(op => {
       const activeClass = op.stopEpoch === null ? "active" : "";
-      
-      // Расчет длительности
       const stopTime = op.stopEpoch || Date.now();
       const durationSec = Math.floor((stopTime - op.startEpoch) / 1000);
       const hours = Math.floor(durationSec / 3600);
@@ -452,7 +601,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       card.className = `operation-card ${activeClass}`;
       card.dataset.id = op.id;
       
-      // Баджи ресурсов
       let resourcesHtml = "";
       if (op.people > 0) {
         resourcesHtml += `
@@ -479,7 +627,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         `;
       }
       if (op.equipment) {
-        // Парсим красивый вывод техники без машинистов во всплывающей подсказке
         const eqList = op.equipment.split(",").map(e => e.split("=")[0].trim()).join(", ");
         resourcesHtml += `
           <div class="op-resource-chip equipment" title="Техника: ${escapeHtml(op.equipment)}">
@@ -505,7 +652,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         `;
       }
       
-      // Кнопка Стоп для активной задачи
       const stopBtnHtml = op.stopEpoch === null 
         ? `<button class="op-action-btn stop-btn" title="Завершить операцию"><span class="material-icons-outlined">stop_circle</span> Завершить</button>` 
         : "";
@@ -539,7 +685,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
       `;
       
-      // Навешивание обработчиков на кнопки карты операции
       if (op.stopEpoch === null) {
         card.querySelector(".stop-btn").addEventListener("click", () => stopOperation(op));
       }
@@ -559,13 +704,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- ОПЕРАЦИИ: СОЗДАНИЕ, ОСТАНОВКА, РАЗДЕЛЕНИЕ, ПОВТОРЕНИЕ ---
 
-  // Создание новой операции
   async function triggerAddOperation() {
     if (!state.currentDay) return;
     
-    // Предзаполняем поля из шаблонов паспорта дня
     const newOp = {
-      id: Date.now() + Math.floor(Math.random() * 1000), // Уникальный ID
+      id: Date.now() + Math.floor(Math.random() * 1000),
       dayId: state.currentDay.id,
       name: "Новая операция",
       startEpoch: Date.now(),
@@ -581,7 +724,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     await state.db.addOperation(newOp);
     await refreshOperations();
     
-    // Автоматически открываем модалку редактирования сразу после создания, чтобы пользователь ввел название
     const addedOp = state.operations.find(o => o.id === newOp.id);
     if (addedOp) {
       openEditOperationModal(addedOp);
@@ -591,7 +733,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   DOM.fabAddOperation.addEventListener("click", triggerAddOperation);
   DOM.emptyAddOpBtn.addEventListener("click", triggerAddOperation);
 
-  // Остановка операции
   async function stopOperation(op) {
     const updated = {
       ...op,
@@ -601,18 +742,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     await refreshOperations();
   }
 
-  // Разделить операцию
   async function splitOperation(op) {
     const now = Date.now();
-    
-    // 1. Останавливаем текущую операцию прямо сейчас
     const updatedCurrent = {
       ...op,
       stopEpoch: now
     };
     await state.db.updateOperation(updatedCurrent);
     
-    // 2. Создаем точно такую же новую операцию, стартующую прямо сейчас (активную)
     const newOp = {
       ...op,
       id: now + Math.floor(Math.random() * 1000),
@@ -620,18 +757,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       stopEpoch: null
     };
     await state.db.addOperation(newOp);
-    
     await refreshOperations();
   }
 
-  // Повторить операцию
   async function repeatOperation(op) {
     const now = Date.now();
     const newOp = {
       ...op,
       id: now + Math.floor(Math.random() * 1000),
       startEpoch: now,
-      stopEpoch: null // Создается активной
+      stopEpoch: null
     };
     await state.db.addOperation(newOp);
     await refreshOperations();
@@ -659,17 +794,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     const op = state.unfinishedOperations[state.currentUnfinishedIndex];
     if (op) {
-      // Скроллим к карточке операции
       const cardEl = document.querySelector(`.operation-card[data-id="${op.id}"]`);
       if (cardEl) {
         cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
-        // Даем кратковременное свечение карте для привлечения внимания
         cardEl.style.outline = "2px solid var(--primary)";
         setTimeout(() => cardEl.style.outline = "none", 1500);
       }
     }
     
-    // Двигаем индекс вперед по кольцу
     state.currentUnfinishedIndex = (state.currentUnfinishedIndex + 1) % count;
     DOM.unfinishedStatusText.textContent = `${state.currentUnfinishedIndex + 1}/${count}`;
   });
@@ -680,25 +812,53 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.exporter.exportToExcel(state.currentDay, state.operations);
   });
 
-  // --- ДИАЛОГ: РЕДАКТИРОВАНИЕ ОПЕРАЦИИ & ШАБЛОНЫ ---
+  // --- ДИАЛОГ: РЕДАКТИРОВАНИЕ ОПЕРАЦИИ, ЧЕКБОКСЫ И ШАБЛОНЫ ---
   function openEditOperationModal(op) {
     state.editingOperationId = op.id;
     DOM.editOperationModalTitle.textContent = `Редактирование: ${escapeHtml(op.name)}`;
     
-    // Переключаемся на первую вкладку "Основное" по умолчанию
     switchTab("main");
     
     DOM.eoName.value = op.name || "";
     DOM.eoPeople.value = op.people || 0;
-    DOM.eoTools.value = op.tools || "";
-    DOM.eoEquipment.value = op.equipment || "";
-    DOM.eoMaterials.value = op.materials || "";
     DOM.eoNotes.value = op.notes || "";
     
-    // 1. Рендерим мультиселект исполнителей из БД
+    // --- 1. Обработка Исполнителей (Сотрудники) ---
     renderWorkersMultiselect(op.workers);
     
-    // 2. Рендерим теги шаблонов из паспорта дня под инпутами для быстрого клика!
+    // --- 2. Обработка Инструментов (Чекбоксы БД + Ручной ввод) ---
+    const dbToolNames = state.tools.map(t => t.name);
+    const opToolsList = op.tools ? op.tools.split(",").map(t => t.trim()).filter(Boolean) : [];
+    
+    // Отмечаем чекбоксы для инструментов, которые есть в БД
+    renderToolsMultiselect(op.tools);
+    
+    // Все остальные инструменты, которых нет в БД, отправляем в поле ручного ввода
+    const manualTools = opToolsList.filter(t => !dbToolNames.includes(t));
+    DOM.eoTools.value = manualTools.join(", ");
+    
+    // --- 3. Обработка Материалов (Чекбоксы БД + Ручной ввод) ---
+    const dbMaterialNames = state.materials.map(m => m.name);
+    const opMaterialsList = op.materials ? op.materials.split(",").map(m => m.trim()).filter(Boolean) : [];
+    
+    renderMaterialsMultiselect(op.materials);
+    
+    const manualMaterials = opMaterialsList.filter(m => !dbMaterialNames.includes(m));
+    DOM.eoMaterials.value = manualMaterials.join(", ");
+    
+    // --- 4. Обработка Техники (Чекбоксы БД с машинистами + Ручной ввод) ---
+    const dbEqNames = state.equipment.map(e => e.name);
+    const opEqList = op.equipment ? op.equipment.split(",").map(e => e.trim()).filter(Boolean) : [];
+    
+    renderEquipmentMultiselect(op.equipment);
+    
+    const manualEqItems = opEqList.filter(item => {
+      const eqName = item.split("=")[0].trim();
+      return !dbEqNames.includes(eqName);
+    });
+    DOM.eoEquipment.value = manualEqItems.join(", ");
+    
+    // --- 5. Рендер тегов-шаблонов из паспорта дня (быстрый клик) ---
     renderTemplateHelpers(DOM.eoToolsTemplates, state.currentDay.toolsList, DOM.eoTools);
     renderTemplateHelpers(DOM.eoEquipmentTemplates, state.currentDay.equipmentList, DOM.eoEquipment);
     renderTemplateHelpers(DOM.eoMaterialsTemplates, state.currentDay.materialsList, DOM.eoMaterials);
@@ -706,7 +866,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     openModal(DOM.editOperationModal);
   }
 
-  // Рендер кнопок шаблонов для быстрого добавления в поле ввода
+  // Быстрое добавление тегов-шаблонов в поля ввода
   function renderTemplateHelpers(container, templatesList, inputEl) {
     container.innerHTML = "";
     if (!templatesList) return;
@@ -725,10 +885,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (currentVal === "") {
           inputEl.value = item;
         } else {
-          // Если кликаем технику, то можем добавить пустой автозаполнитель "= ", например "Экскаватор="
           const suffix = container === DOM.eoEquipmentTemplates ? "=" : "";
-          
-          // Проверяем, есть ли уже этот элемент в инпуте, чтобы избежать дублей
           if (!currentVal.includes(item)) {
             inputEl.value = currentVal + ", " + item + suffix;
           }
@@ -740,12 +897,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Рендер чекбоксов сотрудников с выбором
+  // Чекбоксы: Сотрудники
   function renderWorkersMultiselect(selectedWorkersString = "") {
     DOM.eoWorkersContainer.innerHTML = "";
     
     if (state.staff.length === 0) {
-      DOM.eoWorkersContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База исполнителей пуста. Перейдите во вкладку "База" чтобы добавить рабочих.</div>`;
+      DOM.eoWorkersContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База исполнителей пуста. Перейдите во вкладку "Рабочие" чтобы добавить людей.</div>`;
       return;
     }
     
@@ -753,7 +910,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     state.staff.forEach(person => {
       const isSelected = selectedList.includes(person.name);
-      
       const label = document.createElement("label");
       label.className = `multiselect-item ${isSelected ? "selected" : ""}`;
       
@@ -768,36 +924,174 @@ document.addEventListener("DOMContentLoaded", async () => {
       const checkbox = label.querySelector("input");
       checkbox.addEventListener("change", () => {
         label.classList.toggle("selected", checkbox.checked);
-        
-        // Автоматически пересчитываем текстовую строку рабочих и обновляем инпут
         const checkedBoxes = DOM.eoWorkersContainer.querySelectorAll("input[type='checkbox']:checked");
-        const names = Array.from(checkedBoxes).map(cb => cb.dataset.name);
-        
-        // Устанавливаем количество людей автоматически по числу выбранных чекбоксов!
-        DOM.eoPeople.value = names.length;
+        DOM.eoPeople.value = checkedBoxes.length;
       });
       
       DOM.eoWorkersContainer.appendChild(label);
     });
   }
 
-  // Сохранение операции
+  // Чекбоксы: Инструменты
+  function renderToolsMultiselect(selectedToolsString = "") {
+    DOM.eoToolsContainer.innerHTML = "";
+    
+    if (state.tools.length === 0) {
+      DOM.eoToolsContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База инструментов пуста. Перейдите во вкладку "Инструменты" чтобы наполнить.</div>`;
+      return;
+    }
+    
+    const selectedList = selectedToolsString ? selectedToolsString.split(",").map(x => x.trim()) : [];
+    
+    state.tools.forEach(tool => {
+      const isSelected = selectedList.includes(tool.name);
+      const label = document.createElement("label");
+      label.className = `multiselect-item ${isSelected ? "selected" : ""}`;
+      
+      label.innerHTML = `
+        <input type="checkbox" data-name="${escapeHtml(tool.name)}" ${isSelected ? "checked" : ""}>
+        <div><strong>${escapeHtml(tool.name)}</strong></div>
+      `;
+      
+      const checkbox = label.querySelector("input");
+      checkbox.addEventListener("change", () => {
+        label.classList.toggle("selected", checkbox.checked);
+      });
+      
+      DOM.eoToolsContainer.appendChild(label);
+    });
+  }
+
+  // Чекбоксы: Материалы
+  function renderMaterialsMultiselect(selectedMaterialsString = "") {
+    DOM.eoMaterialsContainer.innerHTML = "";
+    
+    if (state.materials.length === 0) {
+      DOM.eoMaterialsContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База материалов пуста. Перейдите во вкладку "Материалы" чтобы наполнить.</div>`;
+      return;
+    }
+    
+    const selectedList = selectedMaterialsString ? selectedMaterialsString.split(",").map(x => x.trim()) : [];
+    
+    state.materials.forEach(mat => {
+      const isSelected = selectedList.includes(mat.name);
+      const label = document.createElement("label");
+      label.className = `multiselect-item ${isSelected ? "selected" : ""}`;
+      
+      label.innerHTML = `
+        <input type="checkbox" data-name="${escapeHtml(mat.name)}" ${isSelected ? "checked" : ""}>
+        <div><strong>${escapeHtml(mat.name)}</strong></div>
+      `;
+      
+      const checkbox = label.querySelector("input");
+      checkbox.addEventListener("change", () => {
+        label.classList.toggle("selected", checkbox.checked);
+      });
+      
+      DOM.eoMaterialsContainer.appendChild(label);
+    });
+  }
+
+  // Чекбоксы: Техника (с инпутами для машинистов)
+  function renderEquipmentMultiselect(selectedEquipmentString = "") {
+    DOM.eoEquipmentContainer.innerHTML = "";
+    
+    if (state.equipment.length === 0) {
+      DOM.eoEquipmentContainer.innerHTML = `<div style="padding: 8px; color: var(--text-muted); font-size: 0.85rem;">База спецтехники пуста. Перейдите во вкладку "Техника" чтобы наполнить.</div>`;
+      return;
+    }
+    
+    // Парсим строку вида "Excavator=Ivanov, Crane, Truck=Petrov"
+    const selectedMap = {};
+    if (selectedEquipmentString) {
+      selectedEquipmentString.split(",").map(x => x.trim()).forEach(item => {
+        const parts = item.split("=");
+        const name = parts[0].trim();
+        const driver = parts.length > 1 ? parts[1].trim() : "";
+        selectedMap[name] = { selected: true, driver };
+      });
+    }
+    
+    state.equipment.forEach(eq => {
+      const isSelected = selectedMap[eq.name] !== undefined;
+      const initialDriver = isSelected ? selectedMap[eq.name].driver : "";
+      
+      const label = document.createElement("label");
+      label.className = `multiselect-item ${isSelected ? "selected" : ""}`;
+      label.style.display = "flex";
+      label.style.justifyContent = "space-between";
+      label.style.alignItems = "center";
+      
+      label.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px; flex: 1;">
+          <input type="checkbox" data-name="${escapeHtml(eq.name)}" ${isSelected ? "checked" : ""}>
+          <div><strong>${escapeHtml(eq.name)}</strong></div>
+        </div>
+        <input type="text" class="form-input machinist-input" placeholder="Машинист" style="padding:4px 8px; font-size:0.8rem; width:130px; display:${isSelected ? 'block' : 'none'}; margin-left:10px;" value="${escapeHtml(initialDriver)}">
+      `;
+      
+      const checkbox = label.querySelector("input[type='checkbox']");
+      const textInput = label.querySelector("input[type='text']");
+      
+      checkbox.addEventListener("change", () => {
+        label.classList.toggle("selected", checkbox.checked);
+        textInput.style.display = checkbox.checked ? "block" : "none";
+        if (checkbox.checked) textInput.focus();
+      });
+      
+      // Запрещаем закрытие окна или срабатывание чекбокса при клике на текстовый ввод машиниста
+      textInput.addEventListener("click", (e) => e.stopPropagation());
+      
+      DOM.eoEquipmentContainer.appendChild(label);
+    });
+  }
+
+  // Сохранение отредактированной операции
   DOM.saveOperationBtn.addEventListener("click", async () => {
     const op = state.operations.find(o => o.id === state.editingOperationId);
     if (!op) return;
     
-    // Получаем выбранных рабочих из чекбоксов
-    const checkedBoxes = DOM.eoWorkersContainer.querySelectorAll("input[type='checkbox']:checked");
-    const workersString = Array.from(checkedBoxes).map(cb => cb.dataset.name).join(", ");
+    // 1. Собираем сотрудников
+    const checkedWorkers = Array.from(DOM.eoWorkersContainer.querySelectorAll("input[type='checkbox']:checked")).map(cb => cb.dataset.name);
+    const finalWorkers = checkedWorkers.join(", ");
+    
+    // 2. Собираем инструменты (БД + ручные)
+    const checkedTools = Array.from(DOM.eoToolsContainer.querySelectorAll("input[type='checkbox']:checked")).map(cb => cb.dataset.name);
+    const manualToolsStr = DOM.eoTools.value.trim();
+    const manualToolsList = manualToolsStr ? manualToolsStr.split(",").map(t => t.trim()).filter(Boolean) : [];
+    const finalTools = [...checkedTools, ...manualToolsList].join(", ");
+    
+    // 3. Собираем материалы (БД + ручные)
+    const checkedMaterials = Array.from(DOM.eoMaterialsContainer.querySelectorAll("input[type='checkbox']:checked")).map(cb => cb.dataset.name);
+    const manualMaterialsStr = DOM.eoMaterials.value.trim();
+    const manualMaterialsList = manualMaterialsStr ? manualMaterialsStr.split(",").map(m => m.trim()).filter(Boolean) : [];
+    const finalMaterials = [...checkedMaterials, ...manualMaterialsList].join(", ");
+    
+    // 4. Собираем технику с машинистами (БД + ручная)
+    const dbEqItems = [];
+    DOM.eoEquipmentContainer.querySelectorAll(".multiselect-item.selected").forEach(item => {
+      const cb = item.querySelector("input[type='checkbox']");
+      const textInput = item.querySelector("input[type='text']");
+      const eqName = cb.dataset.name;
+      const driver = textInput.value.trim();
+      if (driver) {
+        dbEqItems.push(`${eqName}=${driver}`);
+      } else {
+        dbEqItems.push(eqName);
+      }
+    });
+    const manualEqStr = DOM.eoEquipment.value.trim();
+    const manualEqList = manualEqStr ? manualEqStr.split(",").map(e => e.trim()).filter(Boolean) : [];
+    const finalEquipment = [...dbEqItems, ...manualEqList].join(", ");
     
     const updated = {
       ...op,
       name: DOM.eoName.value.trim() || "Операция",
       people: parseInt(DOM.eoPeople.value) || 0,
-      workers: workersString,
-      tools: DOM.eoTools.value.trim(),
-      equipment: DOM.eoEquipment.value.trim(),
-      materials: DOM.eoMaterials.value.trim(),
+      workers: finalWorkers,
+      tools: finalTools,
+      equipment: finalEquipment,
+      materials: finalMaterials,
       notes: DOM.eoNotes.value.trim()
     };
     
@@ -806,23 +1100,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     closeModal(DOM.editOperationModal);
   });
 
-  // --- ВЫБОР ТАБОВ В ДИАЛОГЕ РЕДАКТИРОВАНИЯ ---
+  // --- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК (Tab Switcher) ---
   function switchTab(tab) {
-    if (tab === "main") {
-      DOM.tabMainBtn.classList.add("active");
-      DOM.tabStaffBtn.classList.remove("active");
-      DOM.tabContentMain.classList.add("active");
-      DOM.tabContentStaff.classList.remove("active");
-    } else {
-      DOM.tabMainBtn.classList.remove("active");
-      DOM.tabStaffBtn.classList.add("active");
-      DOM.tabContentMain.classList.remove("active");
-      DOM.tabContentStaff.classList.add("active");
-    }
+    const tabs = ["main", "staff", "tools", "equipment", "materials"];
+    tabs.forEach(t => {
+      const btn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
+      const content = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      
+      if (btn && content) {
+        if (t === tab) {
+          btn.classList.add("active");
+          content.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+          content.classList.remove("active");
+        }
+      }
+    });
   }
 
   DOM.tabMainBtn.addEventListener("click", () => switchTab("main"));
   DOM.tabStaffBtn.addEventListener("click", () => switchTab("staff"));
+  DOM.tabToolsBtn.addEventListener("click", () => switchTab("tools"));
+  DOM.tabEquipmentBtn.addEventListener("click", () => switchTab("equipment"));
+  DOM.tabMaterialsBtn.addEventListener("click", () => switchTab("materials"));
 
   // --- ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ ОПЕРАЦИИ ---
   DOM.confirmDeleteOperationBtn.addEventListener("click", async () => {
@@ -836,7 +1137,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- ПОДТВЕРЖДЕНИЕ ОПЕРАЦИЙ НАД ДНЯМИ ---
   
-  // Добавление дня
   DOM.confirmAddDayBtn.addEventListener("click", async () => {
     const name = DOM.newDayNameInput.value.trim();
     if (!name) {
@@ -845,7 +1145,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     
     const copySourceId = DOM.copySourceDaySelect.value;
-    
     const newDayId = "day_" + Date.now();
     let newDay = {
       id: newDayId,
@@ -868,7 +1167,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       operationTemplatesList: ""
     };
     
-    // Если выбран день для копирования, копируем паспорт и списки шаблонов ресурсов!
     if (copySourceId) {
       const sourceDay = await state.db.getDay(copySourceId);
       if (sourceDay) {
@@ -897,11 +1195,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     await refreshDaysList();
     await selectDay(newDayId);
-    
     closeModal(DOM.addDayModal);
   });
 
-  // Переименование дня
   DOM.confirmRenameDayBtn.addEventListener("click", async () => {
     const newName = DOM.renameDayInput.value.trim();
     if (!newName) {
@@ -924,18 +1220,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Удаление дня
   DOM.confirmDeleteDayBtn.addEventListener("click", async () => {
     if (state.deletingDayId) {
       await state.db.deleteDay(state.deletingDayId);
       await refreshDaysList();
       
-      // Если удалили открытый в данный момент день
       if (state.currentDay && state.currentDay.id === state.deletingDayId) {
         if (state.days.length > 0) {
           await selectDay(state.days[0].id);
         } else {
-          // Сбрасываем холст
           state.currentDay = null;
           DOM.headerTitle.textContent = "Нормировщик";
           DOM.dayPassportCard.style.display = "none";
@@ -943,7 +1236,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           DOM.emptyOperationsState.style.display = "none";
           DOM.fabAddOperation.style.display = "none";
           DOM.unfinishedNavigator.style.display = "none";
-          // Автооткрываем диалог добавления дня
           DOM.newDayNameInput.value = "Рабочая смена " + new Date().toLocaleDateString("ru-RU");
           openModal(DOM.addDayModal);
         }
@@ -955,7 +1247,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- ХЕЛПЕРЫ ДЛЯ ИНТЕРФЕЙСА (UI Helpers) ---
   
-  // Открытие/закрытие модальных окон
   function openModal(modalEl) {
     modalEl.classList.add("active");
   }
@@ -964,23 +1255,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     modalEl.classList.remove("active");
   }
 
-  // Навешивание обработчиков закрытия на все модальные окна
   document.querySelectorAll(".modal-overlay").forEach(modal => {
-    // Клик на крестик
     const closeBtn = modal.querySelector(".modal-close-btn");
     if (closeBtn) closeBtn.addEventListener("click", () => closeModal(modal));
     
-    // Клик на кнопку Отмена
     const cancelBtn = modal.querySelector(".cancel-btn");
     if (cancelBtn) cancelBtn.addEventListener("click", () => closeModal(modal));
     
-    // Клик на оверлей вне контента (по желанию, для удобства мобильного)
     modal.addEventListener("click", (e) => {
       if (e.target === modal) closeModal(modal);
     });
   });
 
-  // Логика кнопки добавления дня из сайдбара
   DOM.addDayBtn.addEventListener("click", () => {
     DOM.newDayNameInput.value = "Рабочая смена " + new Date().toLocaleDateString("ru-RU");
     openModal(DOM.addDayModal);

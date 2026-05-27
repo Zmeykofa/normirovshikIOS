@@ -319,7 +319,10 @@
       <!-- Вкладки (Tabs) -->
       <div class="tab-header">
         <button id="tabMainBtn" class="tab-btn active">Основное</button>
-        <button id="tabStaffBtn" class="tab-btn">База исполнителей</button>
+        <button id="tabStaffBtn" class="tab-btn">Рабочие</button>
+        <button id="tabToolsBtn" class="tab-btn">Инструменты</button>
+        <button id="tabEquipmentBtn" class="tab-btn">Техника</button>
+        <button id="tabMaterialsBtn" class="tab-btn">Материалы</button>
       </div>
       
       <!-- СОДЕРЖИМОЕ ВКЛАДКИ 1: Основное -->
@@ -337,26 +340,38 @@
         </div>
 
         <div class="form-group">
-          <label>Исполнители (Мультиселект из БД)</label>
+          <label>Исполнители (выберите галочками из БД)</label>
           <div id="eoWorkersContainer" class="multiselect-container">
             <!-- Подгружается динамически -->
           </div>
         </div>
 
         <div class="form-group">
-          <label for="eoTools">Инструменты (выберите из шаблонов или введите)</label>
+          <label>Инструменты (выберите галочками из БД)</label>
+          <div id="eoToolsContainer" class="multiselect-container" style="margin-bottom: 8px;">
+            <!-- Подгружается динамически -->
+          </div>
+          <label for="eoTools">Доп. инструменты (или введите вручную через запятую)</label>
           <input type="text" id="eoTools" class="form-input" placeholder="Шуруповерт">
           <div id="eoToolsTemplates" class="resource-tags" style="margin-top: 4px;"></div>
         </div>
 
         <div class="form-group">
-          <label for="eoEquipment">Техника и машинисты (выберите из шаблонов или введите)</label>
+          <label>Спецтехника и машинисты (выберите из БД и впишите машиниста)</label>
+          <div id="eoEquipmentContainer" class="multiselect-container" style="margin-bottom: 8px;">
+            <!-- Подгружается динамически -->
+          </div>
+          <label for="eoEquipment">Доп. техника (или введите вручную: Техника=Машинист)</label>
           <input type="text" id="eoEquipment" class="form-input" placeholder="Экскаватор=Иванов, Самосвал=Петров">
           <div id="eoEquipmentTemplates" class="resource-tags" style="margin-top: 4px;"></div>
         </div>
 
         <div class="form-group">
-          <label for="eoMaterials">Материалы (выберите из шаблонов или введите)</label>
+          <label>Материалы (выберите галочками из БД)</label>
+          <div id="eoMaterialsContainer" class="multiselect-container" style="margin-bottom: 8px;">
+            <!-- Подгружается динамически -->
+          </div>
+          <label for="eoMaterials">Доп. материалы (или введите вручную через запятую)</label>
           <input type="text" id="eoMaterials" class="form-input" placeholder="Бетон B25">
           <div id="eoMaterialsTemplates" class="resource-tags" style="margin-top: 4px;"></div>
         </div>
@@ -404,6 +419,102 @@
             <input type="text" id="newStaffPosition" class="form-input" placeholder="Должность">
             <input type="text" id="newStaffGrade" class="form-input" placeholder="Разряд">
             <button id="addStaffBtn" class="btn btn-primary" style="padding: 10px;"><span class="material-icons-outlined">add</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 3: База инструментов -->
+      <div id="tabContentTools" class="tab-content">
+        <div class="staff-management">
+          <div class="staff-management-header">
+            <h4>База инструментов</h4>
+          </div>
+          
+          <div class="staff-table-container">
+            <table class="staff-table">
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Действие</th>
+                </tr>
+              </thead>
+              <tbody id="toolsTableBody">
+                <!-- Заполняется JS -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="staff-management-header" style="margin-top: 8px;">
+            <h4>Добавить в базу</h4>
+          </div>
+          
+          <div class="staff-add-form">
+            <input type="text" id="newToolName" class="form-input" placeholder="Название инструмента (например, Болгарка Bosch)">
+            <button id="addToolBtn" class="btn btn-primary" style="padding: 10px;"><span class="material-icons-outlined">add</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 4: База техники -->
+      <div id="tabContentEquipment" class="tab-content">
+        <div class="staff-management">
+          <div class="staff-management-header">
+            <h4>База спецтехники</h4>
+          </div>
+          
+          <div class="staff-table-container">
+            <table class="staff-table">
+              <thead>
+                <tr>
+                  <th>Название машины</th>
+                  <th>Действие</th>
+                </tr>
+              </thead>
+              <tbody id="equipmentTableBody">
+                <!-- Заполняется JS -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="staff-management-header" style="margin-top: 8px;">
+            <h4>Добавить в базу</h4>
+          </div>
+          
+          <div class="staff-add-form">
+            <input type="text" id="newEquipmentName" class="form-input" placeholder="Название техники (например, Экскаватор JCB)">
+            <button id="addEquipmentBtn" class="btn btn-primary" style="padding: 10px;"><span class="material-icons-outlined">add</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- СОДЕРЖИМОЕ ВКЛАДКИ 5: База материалов -->
+      <div id="tabContentMaterials" class="tab-content">
+        <div class="staff-management">
+          <div class="staff-management-header">
+            <h4>База строительных материалов</h4>
+          </div>
+          
+          <div class="staff-table-container">
+            <table class="staff-table">
+              <thead>
+                <tr>
+                  <th>Название материала</th>
+                  <th>Действие</th>
+                </tr>
+              </thead>
+              <tbody id="materialsTableBody">
+                <!-- Заполняется JS -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="staff-management-header" style="margin-top: 8px;">
+            <h4>Добавить в базу</h4>
+          </div>
+          
+          <div class="staff-add-form">
+            <input type="text" id="newMaterialName" class="form-input" placeholder="Название материала (например, Бетон M300)">
+            <button id="addMaterialBtn" class="btn btn-primary" style="padding: 10px;"><span class="material-icons-outlined">add</span></button>
           </div>
         </div>
       </div>

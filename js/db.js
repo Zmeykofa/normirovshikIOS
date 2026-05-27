@@ -1,7 +1,7 @@
 class NormirovshikDB {
   constructor() {
     this.dbName = "NormirovshikDatabase";
-    this.dbVersion = 1;
+    this.dbVersion = 2; // Повышаем версию базы данных до 2
     this.db = null;
   }
 
@@ -28,11 +28,28 @@ class NormirovshikDB {
         if (!db.objectStoreNames.contains("staff")) {
           db.createObjectStore("staff", { keyPath: "id", autoIncrement: true });
         }
+
+        // НОВЫЕ ТАБЛИЦЫ ДЛЯ БАЗЫ ДАННЫХ (Версия 2)
+        
+        // Создаем хранилище инструментов
+        if (!db.objectStoreNames.contains("tools")) {
+          db.createObjectStore("tools", { keyPath: "id", autoIncrement: true });
+        }
+
+        // Создаем хранилище техники
+        if (!db.objectStoreNames.contains("equipment")) {
+          db.createObjectStore("equipment", { keyPath: "id", autoIncrement: true });
+        }
+
+        // Создаем хранилище материалов
+        if (!db.objectStoreNames.contains("materials")) {
+          db.createObjectStore("materials", { keyPath: "id", autoIncrement: true });
+        }
       };
 
       request.onsuccess = (event) => {
         this.db = event.target.result;
-        console.log("IndexedDB успешно инициализирована");
+        console.log("IndexedDB успешно инициализирована (Версия " + this.dbVersion + ")");
         resolve(this);
       };
 
@@ -45,7 +62,6 @@ class NormirovshikDB {
 
   // --- МЕТОДЫ ДЛЯ РАБОТЫ С ДНЯМИ (Days) ---
 
-  // Получить все дни, отсортированные по дате создания (убывание)
   getDays() {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["days"], "readonly");
@@ -53,7 +69,6 @@ class NormirovshikDB {
       const request = store.getAll();
 
       request.onsuccess = () => {
-        // Сортируем дни по дате создания от новых к старым
         const days = request.result.sort((a, b) => b.createdAt - a.createdAt);
         resolve(days);
       };
@@ -62,7 +77,6 @@ class NormirovshikDB {
     });
   }
 
-  // Получить конкретный день
   getDay(id) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["days"], "readonly");
@@ -74,7 +88,6 @@ class NormirovshikDB {
     });
   }
 
-  // Добавить день
   addDay(day) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["days"], "readwrite");
@@ -86,7 +99,6 @@ class NormirovshikDB {
     });
   }
 
-  // Обновить день
   updateDay(day) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["days"], "readwrite");
@@ -98,17 +110,13 @@ class NormirovshikDB {
     });
   }
 
-  // Удалить день и все связанные операции
   deleteDay(id) {
     return new Promise((resolve, reject) => {
-      // Удаляем день
       const transaction = this.db.transaction(["days", "operations"], "readwrite");
       
-      // 1. Удаляем сам день
       const dayStore = transaction.objectStore("days");
       dayStore.delete(id);
 
-      // 2. Удаляем связанные операции
       const opStore = transaction.objectStore("operations");
       const index = opStore.index("dayId");
       const range = IDBKeyRange.only(id);
@@ -135,7 +143,6 @@ class NormirovshikDB {
 
   // --- МЕТОДЫ ДЛЯ РАБОТЫ С ОПЕРАЦИЯМИ (Operations) ---
 
-  // Получить операции для конкретного дня, отсортированные по времени начала (возрастание)
   getOperations(dayId) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["operations"], "readonly");
@@ -145,7 +152,6 @@ class NormirovshikDB {
       const request = index.getAll(range);
 
       request.onsuccess = () => {
-        // Сортируем по времени начала от ранних к поздним
         const ops = request.result.sort((a, b) => a.startEpoch - b.startEpoch);
         resolve(ops);
       };
@@ -154,7 +160,6 @@ class NormirovshikDB {
     });
   }
 
-  // Добавить операцию
   addOperation(operation) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["operations"], "readwrite");
@@ -166,7 +171,6 @@ class NormirovshikDB {
     });
   }
 
-  // Обновить операцию
   updateOperation(operation) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["operations"], "readwrite");
@@ -178,7 +182,6 @@ class NormirovshikDB {
     });
   }
 
-  // Удалить операцию
   deleteOperation(id) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["operations"], "readwrite");
@@ -190,7 +193,7 @@ class NormirovshikDB {
     });
   }
 
-  // --- МЕТОДЫ ДЛЯ РАБОТЫ С СОТРУДНИКАМИ (Staff Database) ---
+  // --- МЕТОДЫ ДЛЯ РАБОТЫ С СОТРУДНИКАМИ (Staff) ---
 
   getStaff() {
     return new Promise((resolve, reject) => {
@@ -232,6 +235,120 @@ class NormirovshikDB {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["staff"], "readwrite");
       const store = transaction.objectStore("staff");
+      const request = store.delete(id);
+
+      request.onsuccess = () => resolve(id);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // --- МЕТОДЫ ДЛЯ РАБОТЫ С ИНСТРУМЕНТАМИ (Tools) ---
+
+  getTools() {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["tools"], "readonly");
+      const store = transaction.objectStore("tools");
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  addTool(tool) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["tools"], "readwrite");
+      const store = transaction.objectStore("tools");
+      const request = store.add(tool);
+
+      request.onsuccess = (event) => {
+        tool.id = event.target.result;
+        resolve(tool);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  deleteTool(id) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["tools"], "readwrite");
+      const store = transaction.objectStore("tools");
+      const request = store.delete(id);
+
+      request.onsuccess = () => resolve(id);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // --- МЕТОДЫ ДЛЯ РАБОТЫ С ТЕХНИКОЙ (Equipment) ---
+
+  getEquipment() {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["equipment"], "readonly");
+      const store = transaction.objectStore("equipment");
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  addEquipment(item) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["equipment"], "readwrite");
+      const store = transaction.objectStore("equipment");
+      const request = store.add(item);
+
+      request.onsuccess = (event) => {
+        item.id = event.target.result;
+        resolve(item);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  deleteEquipment(id) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["equipment"], "readwrite");
+      const store = transaction.objectStore("equipment");
+      const request = store.delete(id);
+
+      request.onsuccess = () => resolve(id);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // --- МЕТОДЫ ДЛЯ РАБОТЫ С МАТЕРИАЛАМИ (Materials) ---
+
+  getMaterials() {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["materials"], "readonly");
+      const store = transaction.objectStore("materials");
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  addMaterial(material) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["materials"], "readwrite");
+      const store = transaction.objectStore("materials");
+      const request = store.add(material);
+
+      request.onsuccess = (event) => {
+        material.id = event.target.result;
+        resolve(material);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  deleteMaterial(id) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["materials"], "readwrite");
+      const store = transaction.objectStore("materials");
       const request = store.delete(id);
 
       request.onsuccess = () => resolve(id);
