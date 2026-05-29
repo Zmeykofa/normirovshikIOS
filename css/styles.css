@@ -1176,6 +1176,14 @@ input, button, textarea, select {
     min-height: 44px;
     justify-content: center;
   }
+
+  /* Внутренний скролл для паспорта дня, чтобы он не занимал весь экран */
+  .passport-body {
+    max-height: 250px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 12px;
+  }
 }
 
 /* ОПТИМИЗАЦИЯ ДЛЯ IOS / МОБИЛЬНЫХ УСТРОЙСТВ */
