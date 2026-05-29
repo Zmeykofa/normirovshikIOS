@@ -1041,7 +1041,10 @@ input, button, textarea, select {
   top: 0;
 }
 
-.staff-delete-btn {
+.staff-delete-btn,
+.tool-delete-btn,
+.eq-delete-btn,
+.mat-delete-btn {
   background: none;
   border: none;
   color: var(--danger);
@@ -1049,11 +1052,16 @@ input, button, textarea, select {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
+  padding: 6px;
   border-radius: var(--radius-full);
+  min-width: 32px;
+  min-height: 32px;
 }
 
-.staff-delete-btn:hover {
+.staff-delete-btn:hover,
+.tool-delete-btn:hover,
+.eq-delete-btn:hover,
+.mat-delete-btn:hover {
   background: var(--danger-glow);
 }
 

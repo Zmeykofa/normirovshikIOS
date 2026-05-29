@@ -134,6 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Справочник: Техника
     equipmentTableBody: document.getElementById("equipmentTableBody"),
     newEquipmentName: document.getElementById("newEquipmentName"),
+    newEquipmentMachine: document.getElementById("newEquipmentMachine"),
     newEquipmentMachinist: document.getElementById("newEquipmentMachinist"),
     addEquipmentBtn: document.getElementById("addEquipmentBtn"),
     
@@ -227,13 +228,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       tr.querySelector(".staff-delete-btn").addEventListener("click", async (e) => {
         const id = Number(e.currentTarget.dataset.id);
-        await state.db.deleteStaff(id);
-        await loadStaff();
-        
-        // Синхронизируем: если открыта модалка редактирования операции, перерисовываем чекбоксы
-        if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
-          const op = state.operations.find(o => o.id === state.editingOperationId);
-          renderWorkersMultiselect(op ? op.workers : "");
+        if (confirm(`Вы уверены, что хотите удалить сотрудника "${person.name}" из базы данных?`)) {
+          await state.db.deleteStaff(id);
+          await loadStaff();
+          
+          // Синхронизируем: если открыта модалка редактирования операции, перерисовываем чекбоксы
+          if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+            const op = state.operations.find(o => o.id === state.editingOperationId);
+            renderWorkersMultiselect(op ? op.workers : "");
+          }
         }
       });
       
@@ -289,12 +292,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       tr.querySelector(".tool-delete-btn").addEventListener("click", async (e) => {
         const id = Number(e.currentTarget.dataset.id);
-        await state.db.deleteTool(id);
-        await loadTools();
-        
-        if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
-          const op = state.operations.find(o => o.id === state.editingOperationId);
-          renderToolsMultiselect(op ? op.tools : "");
+        if (confirm(`Вы уверены, что хотите удалить инструмент "${tool.name}" из базы данных?`)) {
+          await state.db.deleteTool(id);
+          await loadTools();
+          
+          if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+            const op = state.operations.find(o => o.id === state.editingOperationId);
+            renderToolsMultiselect(op ? op.tools : "");
+          }
         }
       });
       
@@ -327,13 +332,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderEquipmentTable() {
     DOM.equipmentTableBody.innerHTML = "";
     if (state.equipment.length === 0) {
-      DOM.equipmentTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">База спецтехники пуста. Добавьте записи ниже.</td></tr>`;
+      DOM.equipmentTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">База спецтехники пуста. Добавьте записи ниже.</td></tr>`;
       return;
     }
     state.equipment.forEach(item => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><strong>${escapeHtml(item.name)}</strong></td>
+        <td>${escapeHtml(item.machine || "—")}</td>
         <td>${escapeHtml(item.machinist || "—")}</td>
         <td>
           <button class="eq-delete-btn" data-id="${item.id}">
@@ -344,12 +350,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       tr.querySelector(".eq-delete-btn").addEventListener("click", async (e) => {
         const id = Number(e.currentTarget.dataset.id);
-        await state.db.deleteEquipment(id);
-        await loadEquipment();
-        
-        if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
-          const op = state.operations.find(o => o.id === state.editingOperationId);
-          renderEquipmentMultiselect(op ? op.equipment : "");
+        if (confirm(`Вы уверены, что хотите удалить технику "${item.name} ${item.machine ? `(${item.machine})` : ""}" из базы данных?`)) {
+          await state.db.deleteEquipment(id);
+          await loadEquipment();
+          
+          if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+            const op = state.operations.find(o => o.id === state.editingOperationId);
+            renderEquipmentMultiselect(op ? op.equipment : "");
+          }
         }
       });
       
@@ -359,13 +367,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   DOM.addEquipmentBtn.addEventListener("click", async () => {
     const name = DOM.newEquipmentName.value.trim();
+    const machine = DOM.newEquipmentMachine.value.trim();
     const machinist = DOM.newEquipmentMachinist.value.trim();
     if (!name) {
-      alert("Введите название спецтехники");
+      alert("Введите тип техники");
       return;
     }
-    await state.db.addEquipment({ name, machinist });
+    await state.db.addEquipment({ name, machine, machinist });
     DOM.newEquipmentName.value = "";
+    DOM.newEquipmentMachine.value = "";
     DOM.newEquipmentMachinist.value = "";
     await loadEquipment();
     
@@ -400,12 +410,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       tr.querySelector(".mat-delete-btn").addEventListener("click", async (e) => {
         const id = Number(e.currentTarget.dataset.id);
-        await state.db.deleteMaterial(id);
-        await loadMaterials();
-        
-        if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
-          const op = state.operations.find(o => o.id === state.editingOperationId);
-          renderMaterialsMultiselect(op ? op.materials : "");
+        if (confirm(`Вы уверены, что хотите удалить материал "${mat.name}" из базы данных?`)) {
+          await state.db.deleteMaterial(id);
+          await loadMaterials();
+          
+          if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+            const op = state.operations.find(o => o.id === state.editingOperationId);
+            renderMaterialsMultiselect(op ? op.materials : "");
+          }
         }
       });
       
@@ -1070,7 +1082,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       label.innerHTML = `
         <div style="display:flex; align-items:center; gap:10px; flex: 1;">
           <input type="checkbox" data-name="${escapeHtml(eq.name)}" ${isSelected ? "checked" : ""}>
-          <div><strong>${escapeHtml(eq.name)}</strong></div>
+          <div>
+            <strong>${escapeHtml(eq.name)}</strong>
+            ${eq.machine ? `<span style="font-size: 0.75rem; color: var(--text-muted); display: block;">${escapeHtml(eq.machine)}</span>` : ""}
+          </div>
         </div>
         <input type="text" class="form-input machinist-input" placeholder="Машинист" style="padding:4px 8px; font-size:0.8rem; width:120px; display:${isSelected ? 'block' : 'none'}; margin-left:10px;" value="${escapeHtml(initialDriver)}">
       `;
