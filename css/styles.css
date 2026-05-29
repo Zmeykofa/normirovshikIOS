@@ -432,6 +432,7 @@ input, button, textarea, select {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Разрешает flex-контейнерам корректно сжиматься и скроллить внутренности */
   height: 100%;
   overflow: hidden;
   background-color: var(--bg-primary);
@@ -1156,6 +1157,24 @@ input, button, textarea, select {
   select,
   .machinist-input {
     font-size: 16px !important;
+  }
+
+  /* Кнопки операций на мобильных: только иконки, крупные зоны нажатия (44px) */
+  .op-actions-row {
+    justify-content: flex-start; /* Выравниваем влево, чтобы избежать перекрытия с FAB "+ Операция" */
+    gap: 8px;
+    width: 100%;
+  }
+
+  .op-actions-row .btn-label {
+    display: none; /* Скрываем текстовые подписи */
+  }
+
+  .op-action-btn {
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
   }
 }
 

@@ -505,6 +505,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     DOM.dayPassportCard.style.display = "block";
     DOM.fabAddOperation.style.display = "flex";
+
+    // На мобильных экранах скрываем тело паспорта по умолчанию для разгрузки интерфейса
+    if (window.innerWidth <= 768) {
+      DOM.passportBody.classList.add("collapsed");
+      DOM.passportToggleBtn.querySelector("span").textContent = "expand_more";
+    } else {
+      DOM.passportBody.classList.remove("collapsed");
+      DOM.passportToggleBtn.querySelector("span").textContent = "expand_less";
+    }
   }
 
   // --- УПРАВЛЕНИЕ ПАСПОРТОМ ДНЯ (Passport) ---
@@ -692,7 +701,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       
       const stopBtnHtml = op.stopEpoch === null 
-        ? `<button class="op-action-btn stop-btn" title="Завершить операцию"><span class="material-icons-outlined">stop_circle</span> Завершить</button>` 
+        ? `<button class="op-action-btn stop-btn" title="Завершить операцию"><span class="material-icons-outlined">stop_circle</span> <span class="btn-label">Завершить</span></button>` 
         : "";
       
       card.innerHTML = `
@@ -718,8 +727,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="op-actions-row">
           ${stopBtnHtml}
           <button class="op-action-btn edit-btn" title="Редактировать"><span class="material-icons-outlined">edit</span></button>
-          <button class="op-action-btn split-btn" title="Разделить"><span class="material-icons-outlined">content_cut</span> Разделить</button>
-          <button class="op-action-btn repeat-btn" title="Повторить"><span class="material-icons-outlined">replay</span> Повторить</button>
+          <button class="op-action-btn split-btn" title="Разделить"><span class="material-icons-outlined">content_cut</span> <span class="btn-label">Разделить</span></button>
+          <button class="op-action-btn repeat-btn" title="Повторить"><span class="material-icons-outlined">replay</span> <span class="btn-label">Повторить</span></button>
           <button class="op-action-btn delete-btn" title="Удалить"><span class="material-icons-outlined">delete</span></button>
         </div>
       `;
