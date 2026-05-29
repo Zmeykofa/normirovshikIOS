@@ -48,6 +48,9 @@
         <button id="openDirectoriesBtn" class="btn btn-text" style="width: 100%;">
           <span class="material-icons-outlined">storage</span> Справочники БД
         </button>
+        <button id="resetAppCacheBtn" class="btn btn-text" style="width: 100%; color: var(--text-muted); font-size: 0.85rem; padding: 6px;">
+          <span class="material-icons-outlined" style="font-size: 16px;">autorenew</span> Обновить кэш PWA
+        </button>
       </div>
     </aside>
 
@@ -560,11 +563,15 @@
   <script src="js/app.js"></script>
   
   <script>
-    // Регистрация Service Worker для оффлайн работы PWA
+    // Регистрация Service Worker для оффлайн работы PWA с форсированием обновлений
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('Service Worker успешно зарегистрирован!', reg.scope))
+        navigator.serviceWorker.register('sw.js?v=3')
+          .then(reg => {
+            console.log('Service Worker успешно зарегистрирован!', reg.scope);
+            // Форсируем обновление при каждом посещении
+            reg.update();
+          })
           .catch(err => console.log('Ошибка регистрации Service Worker:', err));
       });
     }
