@@ -259,7 +259,7 @@ class NormirovshikDB {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["tools"], "readwrite");
       const store = transaction.objectStore("tools");
-      const request = store.add(tool);
+      const request = store.put(tool);
 
       request.onsuccess = (event) => {
         tool.id = event.target.result;
@@ -297,7 +297,7 @@ class NormirovshikDB {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["equipment"], "readwrite");
       const store = transaction.objectStore("equipment");
-      const request = store.add(item);
+      const request = store.put(item);
 
       request.onsuccess = (event) => {
         item.id = event.target.result;
@@ -335,7 +335,7 @@ class NormirovshikDB {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["materials"], "readwrite");
       const store = transaction.objectStore("materials");
-      const request = store.add(material);
+      const request = store.put(material);
 
       request.onsuccess = (event) => {
         material.id = event.target.result;

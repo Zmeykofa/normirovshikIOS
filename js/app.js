@@ -17,11 +17,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     equipment: [],
     materials: [],
     
-    // Вспомогательные ID для диалогов
+    // Вспомогательные ID для диалогов и справочников
     editingDayId: null,
     deletingDayId: null,
     editingOperationId: null,
     deletingOperationId: null,
+    editingStaffId: null,
+    editingToolId: null,
+    editingEquipmentId: null,
+    editingMaterialId: null,
     
     // Активные таймеры
     timerInterval: null
@@ -134,7 +138,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Справочник: Техника
     equipmentTableBody: document.getElementById("equipmentTableBody"),
     newEquipmentName: document.getElementById("newEquipmentName"),
-    newEquipmentMachine: document.getElementById("newEquipmentMachine"),
+    newEquipmentPosition: document.getElementById("newEquipmentPosition"),
+    newEquipmentGrade: document.getElementById("newEquipmentGrade"),
     newEquipmentMachinist: document.getElementById("newEquipmentMachinist"),
     addEquipmentBtn: document.getElementById("addEquipmentBtn"),
     
@@ -216,23 +221,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.staff.forEach(person => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><strong>${escapeHtml(person.name)}</strong></td>
+        <td><strong>${escapeHtml(person.name || "—")}</strong></td>
         <td>${escapeHtml(person.position || "—")}</td>
         <td>${escapeHtml(person.grade || "—")}</td>
         <td>
-          <button class="staff-delete-btn" data-id="${person.id}">
-            <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
-          </button>
+          <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+            <button class="staff-edit-btn" data-id="${person.id}">
+              <span class="material-icons-outlined" style="font-size: 16px;">edit</span>
+            </button>
+            <button class="staff-delete-btn" data-id="${person.id}">
+              <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
+            </button>
+          </div>
         </td>
       `;
       
+      // Редактирование сотрудника
+      tr.querySelector(".staff-edit-btn").addEventListener("click", () => {
+        state.editingStaffId = person.id;
+        DOM.newStaffPosition.value = person.position || "";
+        DOM.newStaffGrade.value = person.grade || "";
+        DOM.newStaffName.value = person.name || "";
+        
+        DOM.addStaffBtn.innerHTML = `<span class="material-icons-outlined">save</span> Сохранить изменения`;
+        DOM.addStaffBtn.style.background = "#10b981"; // Зеленая подкраска для сохранения
+      });
+
+      // Удаление сотрудника
       tr.querySelector(".staff-delete-btn").addEventListener("click", async (e) => {
         const id = Number(e.currentTarget.dataset.id);
-        if (confirm(`Вы уверены, что хотите удалить сотрудника "${person.name}" из базы данных?`)) {
+        const displayName = getStaffDisplayName(person);
+        if (confirm(`Вы уверены, что хотите удалить сотрудника "${displayName}" из базы данных?`)) {
           await state.db.deleteStaff(id);
           await loadStaff();
           
-          // Синхронизируем: если открыта модалка редактирования операции, перерисовываем чекбоксы
           if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
             const op = state.operations.find(o => o.id === state.editingOperationId);
             renderWorkersMultiselect(op ? op.workers : "");
@@ -245,16 +267,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   DOM.addStaffBtn.addEventListener("click", async () => {
-    const name = DOM.newStaffName.value.trim();
     const position = DOM.newStaffPosition.value.trim();
     const grade = DOM.newStaffGrade.value.trim();
+    const name = DOM.newStaffName.value.trim();
     
-    if (!name) {
-      alert("Пожалуйста, введите имя сотрудника");
+    if (!position && !name) {
+      alert("Пожалуйста, заполните ФИО или должность сотрудника");
       return;
     }
     
-    await state.db.addStaff({ name, position, grade });
+    const newPerson = { name, position, grade };
+    const newDisplayName = getStaffDisplayName(newPerson);
+
+    if (state.editingStaffId) {
+      const oldPerson = state.staff.find(p => p.id === state.editingStaffId);
+      const oldDisplayName = oldPerson ? getStaffDisplayName(oldPerson) : "";
+
+      newPerson.id = state.editingStaffId;
+      await state.db.updateStaff(newPerson);
+      
+      // Каскадно обновляем во всей БД
+      await cascadeUpdateResource("staff", oldDisplayName, newDisplayName);
+
+      state.editingStaffId = null;
+      DOM.addStaffBtn.innerHTML = `<span class="material-icons-outlined">add</span> Добавить сотрудника`;
+      DOM.addStaffBtn.style.background = ""; // Сбрасываем цвет кнопки
+    } else {
+      await state.db.addStaff(newPerson);
+    }
+    
     DOM.newStaffName.value = "";
     DOM.newStaffPosition.value = "";
     DOM.newStaffGrade.value = "";
@@ -284,12 +325,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       tr.innerHTML = `
         <td><strong>${escapeHtml(tool.name)}</strong></td>
         <td>
-          <button class="tool-delete-btn" data-id="${tool.id}">
-            <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
-          </button>
+          <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+            <button class="tool-edit-btn" data-id="${tool.id}">
+              <span class="material-icons-outlined" style="font-size: 16px;">edit</span>
+            </button>
+            <button class="tool-delete-btn" data-id="${tool.id}">
+              <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
+            </button>
+          </div>
         </td>
       `;
       
+      // Редактирование инструмента
+      tr.querySelector(".tool-edit-btn").addEventListener("click", () => {
+        state.editingToolId = tool.id;
+        DOM.newToolName.value = tool.name;
+        
+        DOM.addToolBtn.innerHTML = `<span class="material-icons-outlined">save</span>`;
+        DOM.addToolBtn.style.background = "#10b981";
+      });
+
+      // Удаление инструмента
       tr.querySelector(".tool-delete-btn").addEventListener("click", async (e) => {
         const id = Number(e.currentTarget.dataset.id);
         if (confirm(`Вы уверены, что хотите удалить инструмент "${tool.name}" из базы данных?`)) {
@@ -313,7 +369,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("Введите название инструмента");
       return;
     }
-    await state.db.addTool({ name });
+
+    if (state.editingToolId) {
+      const oldTool = state.tools.find(t => t.id === state.editingToolId);
+      const oldName = oldTool ? oldTool.name : "";
+
+      await state.db.addTool({ id: state.editingToolId, name });
+      await cascadeUpdateResource("tools", oldName, name);
+
+      state.editingToolId = null;
+      DOM.addToolBtn.innerHTML = `<span class="material-icons-outlined">add</span>`;
+      DOM.addToolBtn.style.background = "";
+    } else {
+      await state.db.addTool({ name });
+    }
+    
     DOM.newToolName.value = "";
     await loadTools();
     
@@ -332,25 +402,45 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderEquipmentTable() {
     DOM.equipmentTableBody.innerHTML = "";
     if (state.equipment.length === 0) {
-      DOM.equipmentTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">База спецтехники пуста. Добавьте записи ниже.</td></tr>`;
+      DOM.equipmentTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">База спецтехники пуста. Добавьте записи ниже.</td></tr>`;
       return;
     }
     state.equipment.forEach(item => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><strong>${escapeHtml(item.name)}</strong></td>
-        <td>${escapeHtml(item.machine || "—")}</td>
+        <td>${escapeHtml(item.position || "—")}</td>
+        <td>${escapeHtml(item.grade || "—")}</td>
         <td>${escapeHtml(item.machinist || "—")}</td>
         <td>
-          <button class="eq-delete-btn" data-id="${item.id}">
-            <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
-          </button>
+          <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+            <button class="eq-edit-btn" data-id="${item.id}">
+              <span class="material-icons-outlined" style="font-size: 16px;">edit</span>
+            </button>
+            <button class="eq-delete-btn" data-id="${item.id}">
+              <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
+            </button>
+          </div>
         </td>
       `;
       
+      // Редактирование техники
+      tr.querySelector(".eq-edit-btn").addEventListener("click", () => {
+        state.editingEquipmentId = item.id;
+        DOM.newEquipmentName.value = item.name || "";
+        DOM.newEquipmentPosition.value = item.position || "";
+        DOM.newEquipmentGrade.value = item.grade || "";
+        DOM.newEquipmentMachinist.value = item.machinist || "";
+        
+        DOM.addEquipmentBtn.innerHTML = `<span class="material-icons-outlined">save</span> Сохранить изменения`;
+        DOM.addEquipmentBtn.style.background = "#10b981";
+      });
+
+      // Удаление техники
       tr.querySelector(".eq-delete-btn").addEventListener("click", async (e) => {
         const id = Number(e.currentTarget.dataset.id);
-        if (confirm(`Вы уверены, что хотите удалить технику "${item.name} ${item.machine ? `(${item.machine})` : ""}" из базы данных?`)) {
+        const displayName = getEquipmentDisplayName(item);
+        if (confirm(`Вы уверены, что хотите удалить технику "${displayName}" из базы данных?`)) {
           await state.db.deleteEquipment(id);
           await loadEquipment();
           
@@ -367,16 +457,40 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   DOM.addEquipmentBtn.addEventListener("click", async () => {
     const name = DOM.newEquipmentName.value.trim();
-    const machine = DOM.newEquipmentMachine.value.trim();
+    const position = DOM.newEquipmentPosition.value.trim();
+    const grade = DOM.newEquipmentGrade.value.trim();
     const machinist = DOM.newEquipmentMachinist.value.trim();
+    
     if (!name) {
-      alert("Введите тип техники");
+      alert("Введите название спецтехники");
       return;
     }
-    await state.db.addEquipment({ name, machine, machinist });
+    
+    const newEq = { name, position, grade, machinist };
+    const newDisplayName = getEquipmentDisplayName(newEq);
+
+    if (state.editingEquipmentId) {
+      const oldEq = state.equipment.find(e => e.id === state.editingEquipmentId);
+      const oldDisplayName = oldEq ? getEquipmentDisplayName(oldEq) : "";
+
+      newEq.id = state.editingEquipmentId;
+      await state.db.addEquipment(newEq);
+      
+      // Каскадно обновляем во всей БД
+      await cascadeUpdateResource("equipment", oldDisplayName, newDisplayName);
+
+      state.editingEquipmentId = null;
+      DOM.addEquipmentBtn.innerHTML = `<span class="material-icons-outlined">add</span> Добавить технику`;
+      DOM.addEquipmentBtn.style.background = "";
+    } else {
+      await state.db.addEquipment(newEq);
+    }
+    
     DOM.newEquipmentName.value = "";
-    DOM.newEquipmentMachine.value = "";
+    DOM.newEquipmentPosition.value = "";
+    DOM.newEquipmentGrade.value = "";
     DOM.newEquipmentMachinist.value = "";
+    
     await loadEquipment();
     
     if (DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
@@ -402,12 +516,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       tr.innerHTML = `
         <td><strong>${escapeHtml(mat.name)}</strong></td>
         <td>
-          <button class="mat-delete-btn" data-id="${mat.id}">
-            <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
-          </button>
+          <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+            <button class="mat-edit-btn" data-id="${mat.id}">
+              <span class="material-icons-outlined" style="font-size: 16px;">edit</span>
+            </button>
+            <button class="mat-delete-btn" data-id="${mat.id}">
+              <span class="material-icons-outlined" style="font-size: 16px;">delete</span>
+            </button>
+          </div>
         </td>
       `;
       
+      // Редактирование материала
+      tr.querySelector(".mat-edit-btn").addEventListener("click", () => {
+        state.editingMaterialId = mat.id;
+        DOM.newMaterialName.value = mat.name;
+        
+        DOM.addMaterialBtn.innerHTML = `<span class="material-icons-outlined">save</span>`;
+        DOM.addMaterialBtn.style.background = "#10b981";
+      });
+
+      // Удаление материала
       tr.querySelector(".mat-delete-btn").addEventListener("click", async (e) => {
         const id = Number(e.currentTarget.dataset.id);
         if (confirm(`Вы уверены, что хотите удалить материал "${mat.name}" из базы данных?`)) {
@@ -431,7 +560,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("Введите название материала");
       return;
     }
-    await state.db.addMaterial({ name });
+
+    if (state.editingMaterialId) {
+      const oldMaterial = state.materials.find(m => m.id === state.editingMaterialId);
+      const oldName = oldMaterial ? oldMaterial.name : "";
+
+      await state.db.addMaterial({ id: state.editingMaterialId, name });
+      await cascadeUpdateResource("materials", oldName, name);
+
+      state.editingMaterialId = null;
+      DOM.addMaterialBtn.innerHTML = `<span class="material-icons-outlined">add</span>`;
+      DOM.addMaterialBtn.style.background = "";
+    } else {
+      await state.db.addMaterial({ name });
+    }
+    
     DOM.newMaterialName.value = "";
     await loadMaterials();
     
@@ -967,15 +1110,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     const selectedList = selectedWorkersString ? selectedWorkersString.split(",").map(x => x.trim()) : [];
     
     state.staff.forEach(person => {
-      const isSelected = selectedList.includes(person.name);
+      const displayName = getStaffDisplayName(person);
+      const isSelected = selectedList.includes(displayName);
       const label = document.createElement("label");
       label.className = `multiselect-item ${isSelected ? "selected" : ""}`;
       
+      const titleText = person.name ? person.name : person.position;
+      const subtitleParts = [];
+      if (person.name && person.position) subtitleParts.push(person.position);
+      if (person.grade) subtitleParts.push(person.grade);
+      const subtitleText = subtitleParts.join(", ");
+      
       label.innerHTML = `
-        <input type="checkbox" data-name="${escapeHtml(person.name)}" ${isSelected ? "checked" : ""}>
+        <input type="checkbox" data-name="${escapeHtml(displayName)}" ${isSelected ? "checked" : ""}>
         <div>
-          <strong>${escapeHtml(person.name)}</strong>
-          <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">${escapeHtml(person.position || "")} ${person.grade ? `(${person.grade} разряд)` : ""}</span>
+          <strong>${escapeHtml(titleText)}</strong>
+          ${subtitleText ? `<span style="font-size: 0.75rem; color: var(--text-muted); display: block;">${escapeHtml(subtitleText)}</span>` : ""}
         </div>
       `;
       
@@ -1059,52 +1209,36 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     
-    const selectedMap = {};
-    if (selectedEquipmentString) {
-      selectedEquipmentString.split(",").map(x => x.trim()).forEach(item => {
-        const parts = item.split("=");
-        const name = parts[0].trim();
-        const driver = parts.length > 1 ? parts[1].trim() : "";
-        selectedMap[name] = { selected: true, driver };
-      });
-    }
+    const selectedList = selectedEquipmentString ? selectedEquipmentString.split(",").map(x => x.trim()) : [];
     
     state.equipment.forEach(eq => {
-      const isSelected = selectedMap[eq.name] !== undefined;
-      const initialDriver = isSelected ? selectedMap[eq.name].driver : "";
+      const displayName = getEquipmentDisplayName(eq);
+      // We check if selectedList has the display name OR if it starts with the eq.name (to support old/manual entries like "Самосвал=Петров")
+      const isSelected = selectedList.some(item => item === displayName || item === eq.name || item.startsWith(eq.name + "="));
       
       const label = document.createElement("label");
       label.className = `multiselect-item ${isSelected ? "selected" : ""}`;
-      label.style.display = "flex";
-      label.style.justifyContent = "space-between";
-      label.style.alignItems = "center";
+      
+      const titleText = eq.name;
+      const subtitleParts = [];
+      if (eq.machinist) subtitleParts.push(eq.machinist);
+      if (eq.position) subtitleParts.push(eq.position);
+      if (eq.grade) subtitleParts.push(eq.grade);
+      const subtitleText = subtitleParts.join(", ");
       
       label.innerHTML = `
-        <div style="display:flex; align-items:center; gap:10px; flex: 1;">
-          <input type="checkbox" data-name="${escapeHtml(eq.name)}" ${isSelected ? "checked" : ""}>
-          <div>
-            <strong>${escapeHtml(eq.name)}</strong>
-            ${eq.machine ? `<span style="font-size: 0.75rem; color: var(--text-muted); display: block;">${escapeHtml(eq.machine)}</span>` : ""}
-          </div>
+        <input type="checkbox" data-name="${escapeHtml(displayName)}" ${isSelected ? "checked" : ""}>
+        <div>
+          <strong>${escapeHtml(titleText)}</strong>
+          ${subtitleText ? `<span style="font-size: 0.75rem; color: var(--text-muted); display: block;">${escapeHtml(subtitleText)}</span>` : ""}
         </div>
-        <input type="text" class="form-input machinist-input" placeholder="Машинист" style="padding:4px 8px; font-size:0.8rem; width:120px; display:${isSelected ? 'block' : 'none'}; margin-left:10px;" value="${escapeHtml(initialDriver)}">
       `;
       
-      const checkbox = label.querySelector("input[type='checkbox']");
-      const textInput = label.querySelector("input[type='text']");
-      
+      const checkbox = label.querySelector("input");
       checkbox.addEventListener("change", () => {
         label.classList.toggle("selected", checkbox.checked);
-        textInput.style.display = checkbox.checked ? "block" : "none";
-        if (checkbox.checked) {
-          if (!textInput.value.trim()) {
-            textInput.value = eq.machinist || "";
-          }
-          textInput.focus();
-        }
       });
       
-      textInput.addEventListener("click", (e) => e.stopPropagation());
       DOM.eoEquipmentContainer.appendChild(label);
     });
   }
@@ -1130,22 +1264,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const manualMaterialsList = manualMaterialsStr ? manualMaterialsStr.split(",").map(m => m.trim()).filter(Boolean) : [];
     const finalMaterials = [...checkedMaterials, ...manualMaterialsList].join(", ");
     
-    // 4. Собираем технику с машинистами (БД + ручная)
-    const dbEqItems = [];
-    DOM.eoEquipmentContainer.querySelectorAll(".multiselect-item.selected").forEach(item => {
-      const cb = item.querySelector("input[type='checkbox']");
-      const textInput = item.querySelector("input[type='text']");
-      const eqName = cb.dataset.name;
-      const driver = textInput.value.trim();
-      if (driver) {
-        dbEqItems.push(`${eqName}=${driver}`);
-      } else {
-        dbEqItems.push(eqName);
-      }
-    });
+    // 4. Собираем технику (БД + ручная)
+    const checkedEquipment = Array.from(DOM.eoEquipmentContainer.querySelectorAll("input[type='checkbox']:checked")).map(cb => cb.dataset.name);
     const manualEqStr = DOM.eoEquipment.value.trim();
     const manualEqList = manualEqStr ? manualEqStr.split(",").map(e => e.trim()).filter(Boolean) : [];
-    const finalEquipment = [...dbEqItems, ...manualEqList].join(", ");
+    const finalEquipment = [...checkedEquipment, ...manualEqList].join(", ");
     
     const updated = {
       ...op,
@@ -1393,5 +1516,141 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  // --- ХЕЛПЕРЫ ФОРМАТИРОВАНИЯ ИМЕН И КАСКАДНЫХ ОБНОВЛЕНИЙ ---
+
+  function getStaffDisplayName(person) {
+    const parts = [];
+    if (person.name) {
+      parts.push(person.name);
+    }
+    const details = [];
+    if (person.position) {
+      details.push(person.position);
+    }
+    if (person.grade) {
+      details.push(person.grade);
+    }
+    if (details.length > 0) {
+      if (person.name) {
+        parts.push(`(${details.join(", ")})`);
+      } else {
+        parts.push(details.join(", "));
+      }
+    }
+    return parts.join(" ").trim() || "Сотрудник";
+  }
+
+  function getEquipmentDisplayName(eq) {
+    const parts = [eq.name];
+    const details = [];
+    if (eq.machinist) {
+      details.push(eq.machinist);
+    }
+    if (eq.position) {
+      details.push(eq.position);
+    }
+    if (eq.grade) {
+      details.push(eq.grade);
+    }
+    if (details.length > 0) {
+      parts.push(`[${details.join(", ")}]`);
+    }
+    return parts.join(" ").trim();
+  }
+
+  async function cascadeUpdateResource(storeName, oldName, newName) {
+    if (!oldName || !newName || oldName === newName) return;
+
+    // 1. Обновляем во всех днях
+    const days = await state.db.getDays();
+    for (let day of days) {
+      let changed = false;
+      const listKey = storeName === "staff" ? "workersList" : 
+                      storeName === "tools" ? "toolsList" : 
+                      storeName === "equipment" ? "equipmentList" : 
+                      storeName === "materials" ? "materialsList" : null;
+      
+      if (listKey && day[listKey]) {
+        const items = day[listKey].split(",").map(x => x.trim());
+        const index = items.indexOf(oldName);
+        if (index !== -1) {
+          items[index] = newName;
+          day[listKey] = items.join(", ");
+          changed = true;
+        }
+      }
+      if (changed) {
+        await state.db.updateDay(day);
+        if (state.currentDay && state.currentDay.id === day.id) {
+          state.currentDay = day;
+        }
+      }
+    }
+
+    // 2. Обновляем во всех операциях
+    for (let day of days) {
+      const ops = await state.db.getOperations(day.id);
+      for (let op of ops) {
+        let changed = false;
+        
+        if (storeName === "staff" && op.workers) {
+          const items = op.workers.split(",").map(x => x.trim());
+          const index = items.indexOf(oldName);
+          if (index !== -1) {
+            items[index] = newName;
+            op.workers = items.join(", ");
+            changed = true;
+          }
+        }
+        
+        if (storeName === "tools" && op.tools) {
+          const items = op.tools.split(",").map(x => x.trim());
+          const index = items.indexOf(oldName);
+          if (index !== -1) {
+            items[index] = newName;
+            op.tools = items.join(", ");
+            changed = true;
+          }
+        }
+        
+        if (storeName === "materials" && op.materials) {
+          const items = op.materials.split(",").map(x => x.trim());
+          const index = items.indexOf(oldName);
+          if (index !== -1) {
+            items[index] = newName;
+            op.materials = items.join(", ");
+            changed = true;
+          }
+        }
+
+        if (storeName === "equipment" && op.equipment) {
+          const items = op.equipment.split(",").map(x => x.trim());
+          let itemChanged = false;
+          const updatedItems = items.map(item => {
+            const parts = item.split("=");
+            const eqName = parts[0].trim();
+            if (eqName === oldName) {
+              itemChanged = true;
+              return parts.length > 1 ? `${newName}=${parts[1].trim()}` : newName;
+            }
+            return item;
+          });
+          if (itemChanged) {
+            op.equipment = updatedItems.join(", ");
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          await state.db.updateOperation(op);
+        }
+      }
+    }
+
+    // Обновляем текущие данные на экране
+    renderPassport();
+    await refreshOperations();
   }
 });

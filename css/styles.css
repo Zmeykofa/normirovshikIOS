@@ -1065,6 +1065,30 @@ input, button, textarea, select {
   background: var(--danger-glow);
 }
 
+.staff-edit-btn,
+.tool-edit-btn,
+.eq-edit-btn,
+.mat-edit-btn {
+  background: none;
+  border: none;
+  color: var(--secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: var(--radius-full);
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.staff-edit-btn:hover,
+.tool-edit-btn:hover,
+.eq-edit-btn:hover,
+.mat-edit-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
 /* Форма добавления сотрудника */
 .staff-add-form {
   display: flex;

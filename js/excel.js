@@ -97,8 +97,20 @@ class ExcelExporter {
       // Обработка техники
       const equipmentItems = op.equipment ? op.equipment.split(",").filter(e => e.trim().length > 0).map(e => e.trim()) : [];
       const equipmentCount = equipmentItems.length;
-      const equipmentNames = equipmentItems.map(item => item.split("=")[0].trim()).join(", ");
+      const equipmentNames = equipmentItems.map(item => {
+        const bracketIndex = item.indexOf(" [");
+        if (bracketIndex !== -1) {
+          return item.substring(0, bracketIndex).trim();
+        }
+        return item.split("=")[0].trim();
+      }).join(", ");
       const machinistsList = equipmentItems.map(item => {
+        const bracketIndex = item.indexOf(" [");
+        if (bracketIndex !== -1) {
+          const eqName = item.substring(0, bracketIndex).trim();
+          const details = item.substring(bracketIndex + 2, item.length - 1).trim();
+          return `${eqName}: ${details}`;
+        }
         const parts = item.split("=");
         return (parts.length > 1 && parts[1].trim().length > 0) ? `${parts[0].trim()}: ${parts[1].trim()}` : null;
       }).filter(Boolean).join(", ");
