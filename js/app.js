@@ -146,9 +146,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Справочник: Материалы
     materialsTableBody: document.getElementById("materialsTableBody"),
     newMaterialName: document.getElementById("newMaterialName"),
-    addMaterialBtn: document.getElementById("addMaterialBtn"),
-    
-    resetAppCacheBtn: document.getElementById("resetAppCacheBtn")
+    addMaterialBtn: document.getElementById("addMaterialBtn")
   };
 
   // --- ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ---
@@ -1493,26 +1491,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     openModal(DOM.addDayModal);
   });
 
-  DOM.resetAppCacheBtn.addEventListener("click", async () => {
-    if (confirm("Вы уверены, что хотите принудительно обновить приложение? Ваши сохраненные дни и справочники в БД НЕ удалятся, но кэш файлов сбросится до самой последней версии.")) {
-      try {
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (let reg of registrations) {
-            await reg.unregister();
-          }
-        }
-        const cacheNames = await caches.keys();
-        for (let name of cacheNames) {
-          await caches.delete(name);
-        }
-        window.location.reload(true);
-      } catch (err) {
-        alert("Ошибка обновления кэша: " + err);
-        window.location.reload(true);
-      }
-    }
-  });
+
 
   // --- БОКОВОЕ МЕНЮ НА МОБИЛЬНЫХ УСТРОЙСТВАХ ---
   function openMobileSidebar() {
