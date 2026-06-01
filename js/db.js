@@ -112,7 +112,7 @@ class NormirovshikDB {
 
   deleteDay(id) {
     return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction(["days", "operations"], "readwrite");
+      const transaction = this.db.transaction(["days", "operations", "staff", "tools", "equipment", "materials"], "readwrite");
       
       const dayStore = transaction.objectStore("days");
       dayStore.delete(id);
@@ -130,8 +130,28 @@ class NormirovshikDB {
         }
       };
 
+      // Удаляем привязанные к этому дню записи справочников
+      const deleteDayBoundItems = (storeName) => {
+        const store = transaction.objectStore(storeName);
+        const req = store.openCursor();
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            if (cursor.value && cursor.value.dayId === id) {
+              cursor.delete();
+            }
+            cursor.continue();
+          }
+        };
+      };
+
+      deleteDayBoundItems("staff");
+      deleteDayBoundItems("tools");
+      deleteDayBoundItems("equipment");
+      deleteDayBoundItems("materials");
+
       transaction.oncomplete = () => {
-        console.log(`День ${id} и все его операции успешно удалены`);
+        console.log(`День ${id}, его операции и справочники успешно удалены`);
         resolve(true);
       };
 
@@ -195,13 +215,16 @@ class NormirovshikDB {
 
   // --- МЕТОДЫ ДЛЯ РАБОТЫ С СОТРУДНИКАМИ (Staff) ---
 
-  getStaff() {
+  getStaff(dayId) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["staff"], "readonly");
       const store = transaction.objectStore("staff");
       const request = store.getAll();
 
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const result = request.result.filter(p => p.dayId === dayId);
+        resolve(result);
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -244,13 +267,16 @@ class NormirovshikDB {
 
   // --- МЕТОДЫ ДЛЯ РАБОТЫ С ИНСТРУМЕНТАМИ (Tools) ---
 
-  getTools() {
+  getTools(dayId) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["tools"], "readonly");
       const store = transaction.objectStore("tools");
       const request = store.getAll();
 
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const result = request.result.filter(t => t.dayId === dayId);
+        resolve(result);
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -282,13 +308,16 @@ class NormirovshikDB {
 
   // --- МЕТОДЫ ДЛЯ РАБОТЫ С ТЕХНИКОЙ (Equipment) ---
 
-  getEquipment() {
+  getEquipment(dayId) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["equipment"], "readonly");
       const store = transaction.objectStore("equipment");
       const request = store.getAll();
 
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const result = request.result.filter(e => e.dayId === dayId);
+        resolve(result);
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -320,13 +349,16 @@ class NormirovshikDB {
 
   // --- МЕТОДЫ ДЛЯ РАБОТЫ С МАТЕРИАЛАМИ (Materials) ---
 
-  getMaterials() {
+  getMaterials(dayId) {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(["materials"], "readonly");
       const store = transaction.objectStore("materials");
       const request = store.getAll();
 
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const result = request.result.filter(m => m.dayId === dayId);
+        resolve(result);
+      };
       request.onerror = () => reject(request.error);
     });
   }

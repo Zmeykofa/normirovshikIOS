@@ -208,7 +208,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ СОТРУДНИКОВ (Staff) ---
   async function loadStaff() {
-    state.staff = await state.db.getStaff();
+    state.staff = state.currentDay ? await state.db.getStaff(state.currentDay.id) : [];
     renderStaffTable();
   }
 
@@ -276,7 +276,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     
-    const newPerson = { name, position, grade };
+    const newPerson = { name, position, grade, dayId: state.currentDay ? state.currentDay.id : "" };
     const newDisplayName = getStaffDisplayName(newPerson);
 
     if (state.editingStaffId) {
@@ -310,7 +310,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ ИНСТРУМЕНТОВ (Tools Database) ---
   async function loadTools() {
-    state.tools = await state.db.getTools();
+    state.tools = state.currentDay ? await state.db.getTools(state.currentDay.id) : [];
     renderToolsTable();
   }
 
@@ -370,18 +370,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    const dayId = state.currentDay ? state.currentDay.id : "";
+
     if (state.editingToolId) {
       const oldTool = state.tools.find(t => t.id === state.editingToolId);
       const oldName = oldTool ? oldTool.name : "";
 
-      await state.db.addTool({ id: state.editingToolId, name });
+      await state.db.addTool({ id: state.editingToolId, name, dayId });
       await cascadeUpdateResource("tools", oldName, name);
 
       state.editingToolId = null;
       DOM.addToolBtn.innerHTML = `<span class="material-icons-outlined">add</span>`;
       DOM.addToolBtn.style.background = "";
     } else {
-      await state.db.addTool({ name });
+      await state.db.addTool({ name, dayId });
     }
     
     DOM.newToolName.value = "";
@@ -395,7 +397,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ ТЕХНИКИ (Equipment Database) ---
   async function loadEquipment() {
-    state.equipment = await state.db.getEquipment();
+    state.equipment = state.currentDay ? await state.db.getEquipment(state.currentDay.id) : [];
     renderEquipmentTable();
   }
 
@@ -466,7 +468,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     
-    const newEq = { name, position, grade, machinist };
+    const newEq = { name, position, grade, machinist, dayId: state.currentDay ? state.currentDay.id : "" };
     const newDisplayName = getEquipmentDisplayName(newEq);
 
     if (state.editingEquipmentId) {
@@ -501,7 +503,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- УПРАВЛЕНИЕ СПРАВОЧНИКОМ МАТЕРИАЛОВ (Materials Database) ---
   async function loadMaterials() {
-    state.materials = await state.db.getMaterials();
+    state.materials = state.currentDay ? await state.db.getMaterials(state.currentDay.id) : [];
     renderMaterialsTable();
   }
 
@@ -561,18 +563,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    const dayId = state.currentDay ? state.currentDay.id : "";
+
     if (state.editingMaterialId) {
       const oldMaterial = state.materials.find(m => m.id === state.editingMaterialId);
       const oldName = oldMaterial ? oldMaterial.name : "";
 
-      await state.db.addMaterial({ id: state.editingMaterialId, name });
+      await state.db.addMaterial({ id: state.editingMaterialId, name, dayId });
       await cascadeUpdateResource("materials", oldName, name);
 
       state.editingMaterialId = null;
       DOM.addMaterialBtn.innerHTML = `<span class="material-icons-outlined">add</span>`;
       DOM.addMaterialBtn.style.background = "";
     } else {
-      await state.db.addMaterial({ name });
+      await state.db.addMaterial({ name, dayId });
     }
     
     DOM.newMaterialName.value = "";
@@ -654,6 +658,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll(".day-item").forEach(item => {
       item.classList.toggle("active", item.dataset.id === dayId);
     });
+    
+    // Загружаем списки ресурсов для этого конкретного дня из БД
+    await loadStaff();
+    await loadTools();
+    await loadEquipment();
+    await loadMaterials();
     
     renderPassport();
     await refreshOperations();
@@ -1372,6 +1382,31 @@ document.addEventListener("DOMContentLoaded", async () => {
           equipmentList: sourceDay.equipmentList || "",
           materialsList: sourceDay.materialsList || ""
         };
+
+        // Копируем все записи справочников из старого дня во вновь созданный
+        const sourceStaff = await state.db.getStaff(copySourceId);
+        for (let p of sourceStaff) {
+          const newP = { name: p.name, position: p.position, grade: p.grade, dayId: newDayId };
+          await state.db.addStaff(newP);
+        }
+
+        const sourceTools = await state.db.getTools(copySourceId);
+        for (let t of sourceTools) {
+          const newT = { name: t.name, dayId: newDayId };
+          await state.db.addTool(newT);
+        }
+
+        const sourceEq = await state.db.getEquipment(copySourceId);
+        for (let e of sourceEq) {
+          const newE = { name: e.name, position: e.position, grade: e.grade, machinist: e.machinist, dayId: newDayId };
+          await state.db.addEquipment(newE);
+        }
+
+        const sourceMat = await state.db.getMaterials(copySourceId);
+        for (let m of sourceMat) {
+          const newM = { name: m.name, dayId: newDayId };
+          await state.db.addMaterial(newM);
+        }
       }
     }
     
