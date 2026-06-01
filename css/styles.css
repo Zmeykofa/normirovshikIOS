@@ -634,7 +634,7 @@ input, button, textarea, select {
 
 /* Списки шаблонов ресурсов */
 .passport-resources {
-  display: flex;
+  display: none; /* Скрыто из веб-версии паспорта по запросу пользователя, но данные сохраняются в БД и экспортируются в Excel */
   flex-direction: column;
   gap: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
