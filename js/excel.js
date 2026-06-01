@@ -200,7 +200,7 @@ class ExcelExporter {
   }
 
   // Генерация и скачивание файла Excel
-  exportToExcel(day, operations) {
+  exportToExcel(day, operations, staffList = [], toolsList = [], equipmentList = [], materialsList = []) {
     // 1. Создаем новую книгу Excel
     const wb = XLSX.utils.book_new();
 
@@ -218,10 +218,34 @@ class ExcelExporter {
       ["Бригада №", day.brigadeNumber || ""],
       ["Бригадир", day.brigadeLeader || ""],
       [], // пустая строка
-      ["Исполнители (список шаблонов)", day.workersList || ""],
-      ["Инструменты (список шаблонов)", day.toolsList || ""],
-      ["Техника (список шаблонов)", day.equipmentList || ""],
-      ["Материалы (список шаблонов)", day.materialsList || ""]
+      ["Исполнители (список шаблонов)", day.workersList || staffList.map(p => {
+        const parts = [];
+        if (p.name) parts.push(p.name);
+        const details = [];
+        if (p.position) details.push(p.position);
+        if (p.grade) details.push(p.grade);
+        if (details.length > 0) {
+          if (p.name) {
+            parts.push(`(${details.join(", ")})`);
+          } else {
+            parts.push(details.join(", "));
+          }
+        }
+        return parts.join(" ").trim() || "Сотрудник";
+      }).join(", ")],
+      ["Инструменты (список шаблонов)", day.toolsList || toolsList.map(t => t.name).join(", ")],
+      ["Техника (список шаблонов)", day.equipmentList || equipmentList.map(item => {
+        const parts = [item.name];
+        const details = [];
+        if (item.machinist) details.push(item.machinist);
+        if (item.position) details.push(item.position);
+        if (item.grade) details.push(item.grade);
+        if (details.length > 0) {
+          parts.push(`[${details.join(", ")}]`);
+        }
+        return parts.join(" ").trim();
+      }).join(", ")],
+      ["Материалы (список шаблонов)", day.materialsList || materialsList.map(m => m.name).join(", ")]
     ];
 
     const wsPassport = XLSX.utils.aoa_to_sheet(passportData);

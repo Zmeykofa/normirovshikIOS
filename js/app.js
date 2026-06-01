@@ -1012,7 +1012,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // --- ЭКСПОРТ В EXCEL ---
   DOM.exportExcelBtn.addEventListener("click", () => {
     if (!state.currentDay) return;
-    state.exporter.exportToExcel(state.currentDay, state.operations);
+    state.exporter.exportToExcel(state.currentDay, state.operations, state.staff, state.tools, state.equipment, state.materials);
   });
 
   // --- ДИАЛОГ: РЕДАКТИРОВАНИЕ ОПЕРАЦИИ, ЧЕКБОКСЫ И ШАБЛОНЫ ---
