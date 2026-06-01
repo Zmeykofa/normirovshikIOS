@@ -177,6 +177,101 @@ class ExcelExporter {
       .join(", ");
   }
 
+  // Вспомогательная функция для форматирования списка шаблонов исполнителей без ФИО
+  formatWorkersTemplateList(workersStr) {
+    if (!workersStr) return "";
+    const workerStrings = workersStr.split(/,(?![^(]*\))/).map(w => w.trim()).filter(Boolean);
+    const uniqueKeys = new Set();
+    
+    workerStrings.forEach(w => {
+      let position = "";
+      let grade = "";
+
+      const match = w.match(/\(([^)]+)\)/);
+      if (match) {
+        const details = match[1].split(",").map(s => s.trim());
+        if (details.length >= 2) {
+          position = details[0];
+          grade = details[1];
+        } else if (details.length === 1) {
+          const val = details[0];
+          if (/\d/.test(val)) {
+            grade = val;
+          } else {
+            position = val;
+          }
+        }
+      } else {
+        if (w.includes(",")) {
+          const details = w.split(",").map(s => s.trim());
+          position = details[0];
+          grade = details[1];
+        } else {
+          const trimmed = w.trim();
+          if (/\d/.test(trimmed)) {
+            grade = trimmed;
+          } else {
+            position = trimmed;
+          }
+        }
+      }
+
+      let posFormatted = position.trim();
+      if (posFormatted) {
+        posFormatted = posFormatted.charAt(0).toUpperCase() + posFormatted.slice(1);
+      }
+
+      let gradeFormatted = grade.trim();
+      if (gradeFormatted) {
+        const gradeClean = gradeFormatted.replace(/\s*р\.?$/, "");
+        gradeFormatted = gradeClean + "р.";
+      }
+
+      let key = "";
+      if (posFormatted && gradeFormatted) {
+        key = `${posFormatted} ${gradeFormatted}`;
+      } else if (posFormatted) {
+        key = posFormatted;
+      } else if (gradeFormatted) {
+        key = gradeFormatted;
+      } else {
+        key = "Сотрудник";
+      }
+
+      uniqueKeys.add(key);
+    });
+
+    return Array.from(uniqueKeys).sort().join(", ");
+  }
+
+  // Вспомогательная функция для форматирования списка шаблонов техники без ФИО
+  formatEquipmentTemplateList(equipmentStr) {
+    if (!equipmentStr) return "";
+    const eqStrings = equipmentStr.split(/,(?![^\[]*\])/).map(e => e.trim()).filter(Boolean);
+    const uniqueKeys = new Set();
+
+    eqStrings.forEach(e => {
+      let name = e;
+      const bracketIndex = e.indexOf(" [");
+      if (bracketIndex !== -1) {
+        name = e.substring(0, bracketIndex).trim();
+      } else if (e.includes("=")) {
+        name = e.split("=")[0].trim();
+      }
+
+      let nameFormatted = name.trim();
+      if (nameFormatted) {
+        nameFormatted = nameFormatted.charAt(0).toUpperCase() + nameFormatted.slice(1);
+      } else {
+        nameFormatted = "Техника";
+      }
+
+      uniqueKeys.add(nameFormatted);
+    });
+
+    return Array.from(uniqueKeys).sort().join(", ");
+  }
+
   // Вспомогательная функция форматирования даты в DD.MM.YYYY HH:mm
   formatDateTime(timestamp) {
     if (!timestamp) return "";
@@ -218,7 +313,7 @@ class ExcelExporter {
       ["Бригада №", day.brigadeNumber || ""],
       ["Бригадир", day.brigadeLeader || ""],
       [], // пустая строка
-      ["Исполнители (список шаблонов)", day.workersList || staffList.map(p => {
+      ["Исполнители (список шаблонов)", this.formatWorkersForExcel(day.workersList || staffList.map(p => {
         const parts = [];
         if (p.name) parts.push(p.name);
         const details = [];
@@ -232,9 +327,9 @@ class ExcelExporter {
           }
         }
         return parts.join(" ").trim() || "Сотрудник";
-      }).join(", ")],
+      }).join(", "))],
       ["Инструменты (список шаблонов)", day.toolsList || toolsList.map(t => t.name).join(", ")],
-      ["Техника (список шаблонов)", day.equipmentList || equipmentList.map(item => {
+      ["Техника (список шаблонов)", this.formatEquipmentForExcel(day.equipmentList || equipmentList.map(item => {
         const parts = [item.name];
         const details = [];
         if (item.machinist) details.push(item.machinist);
@@ -244,7 +339,7 @@ class ExcelExporter {
           parts.push(`[${details.join(", ")}]`);
         }
         return parts.join(" ").trim();
-      }).join(", ")],
+      }).join(", "))],
       ["Материалы (список шаблонов)", day.materialsList || materialsList.map(m => m.name).join(", ")]
     ];
 
