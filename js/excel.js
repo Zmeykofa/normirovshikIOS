@@ -427,7 +427,17 @@ class ExcelExporter {
     const safeDayName = (day.name || "день").replace(/\s+/g, "_");
     const fileName = `Otchet_${safeDayName}_${dateStr}.xlsx`;
 
-    // Вызываем скачивание файла в браузере
-    XLSX.writeFile(wb, fileName);
+    // Вызываем скачивание файла в браузере или отправляем в AndroidBridge
+    if (window.AndroidBridge && window.AndroidBridge.saveExcelFile) {
+      try {
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+        window.AndroidBridge.saveExcelFile(wbout, fileName);
+      } catch (err) {
+        console.error("Ошибка экспорта через AndroidBridge, скачиваем в браузере:", err);
+        XLSX.writeFile(wb, fileName);
+      }
+    } else {
+      XLSX.writeFile(wb, fileName);
+    }
   }
 }

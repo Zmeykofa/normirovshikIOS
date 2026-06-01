@@ -37,6 +37,7 @@
       <div class="sidebar-header">
         <span class="material-icons-outlined logo-icon">date_range</span>
         <h2>Список дней</h2>
+        <span class="sidebar-subtitle">v7.1 • Газпром Строй</span>
       </div>
       <div id="daysListContainer" class="days-list-container">
         <!-- Сюда динамически рендерятся дни -->
@@ -313,7 +314,7 @@
 
   <!-- 5. Диалог редактирования операции (Чистый и компактный) -->
   <div id="editOperationModal" class="modal-overlay">
-    <div class="modal-content" style="max-height: 85vh;">
+    <div class="modal-content" style="max-height: 85%;">
       <div class="modal-header">
         <h3 id="editOperationModalTitle">Редактирование операции</h3>
         <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
@@ -384,7 +385,7 @@
 
   <!-- 5а. Глобальный диалог управления справочниками БД -->
   <div id="directoriesModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 600px; max-height: 85vh;">
+    <div class="modal-content" style="max-width: 600px; max-height: 85%;">
       <div class="modal-header">
         <h3>Справочники базы данных</h3>
         <button class="modal-close-btn"><span class="material-icons-outlined">close</span></button>
@@ -567,7 +568,7 @@
     // Регистрация Service Worker для оффлайн работы PWA с форсированием обновлений
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=15')
+        navigator.serviceWorker.register('sw.js?v=16')
           .then(reg => {
             console.log('Service Worker успешно зарегистрирован!', reg.scope);
             // Форсируем обновление при каждом посещении

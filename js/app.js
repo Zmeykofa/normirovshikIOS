@@ -810,44 +810,60 @@ document.addEventListener("DOMContentLoaded", async () => {
       let resourcesHtml = "";
       if (op.people > 0) {
         resourcesHtml += `
-          <div class="op-resource-chip workers" title="Количество людей">
+          <div class="op-resource-chip people-count" title="Количество людей">
             <span class="material-icons-outlined">people</span>
             <span>Людей: ${op.people}</span>
           </div>
         `;
       }
       if (op.workers) {
-        resourcesHtml += `
-          <div class="op-resource-chip workers" title="Исполнители">
-            <span class="material-icons-outlined">person</span>
-            <span>${escapeHtml(op.workers)}</span>
-          </div>
-        `;
+        const regex = /,(?![^(]*\))(?![^\\[]*\])/;
+        const list = op.workers.split(regex).map(s => s.trim()).filter(Boolean);
+        list.forEach(item => {
+          resourcesHtml += `
+            <div class="op-resource-chip workers" title="Исполнитель">
+              <span class="material-icons-outlined">person</span>
+              <span>${escapeHtml(item)}</span>
+            </div>
+          `;
+        });
       }
       if (op.tools) {
-        resourcesHtml += `
-          <div class="op-resource-chip tools" title="Инструменты">
-            <span class="material-icons-outlined">handyman</span>
-            <span>${escapeHtml(op.tools)}</span>
-          </div>
-        `;
+        const regex = /,(?![^(]*\))(?![^\\[]*\])/;
+        const list = op.tools.split(regex).map(s => s.trim()).filter(Boolean);
+        list.forEach(item => {
+          resourcesHtml += `
+            <div class="op-resource-chip tools" title="Инструмент">
+              <span class="material-icons-outlined">handyman</span>
+              <span>${escapeHtml(item)}</span>
+            </div>
+          `;
+        });
       }
       if (op.equipment) {
-        const eqList = op.equipment.split(",").map(e => e.split("=")[0].trim()).join(", ");
-        resourcesHtml += `
-          <div class="op-resource-chip equipment" title="Техника: ${escapeHtml(op.equipment)}">
-            <span class="material-icons-outlined">construction</span>
-            <span>${escapeHtml(eqList)}</span>
-          </div>
-        `;
+        const regex = /,(?![^(]*\))(?![^\\[]*\])/;
+        const list = op.equipment.split(regex).map(s => s.trim()).filter(Boolean);
+        list.forEach(item => {
+          const displayEq = item.includes("=") ? `${item.split("=")[0]} (${item.split("=")[1]} ед.)` : item;
+          resourcesHtml += `
+            <div class="op-resource-chip equipment" title="Спецтехника">
+              <span class="material-icons-outlined">construction</span>
+              <span>${escapeHtml(displayEq)}</span>
+            </div>
+          `;
+        });
       }
       if (op.materials) {
-        resourcesHtml += `
-          <div class="op-resource-chip materials" title="Материалы">
-            <span class="material-icons-outlined">layers</span>
-            <span>${escapeHtml(op.materials)}</span>
-          </div>
-        `;
+        const regex = /,(?![^(]*\))(?![^\\[]*\])/;
+        const list = op.materials.split(regex).map(s => s.trim()).filter(Boolean);
+        list.forEach(item => {
+          resourcesHtml += `
+            <div class="op-resource-chip materials" title="Материал">
+              <span class="material-icons-outlined">layers</span>
+              <span>${escapeHtml(item)}</span>
+            </div>
+          `;
+        });
       }
       if (op.notes) {
         resourcesHtml += `

@@ -5,19 +5,19 @@
 
 :root {
   /* Цветовая палитра - Премиальная темная тема по умолчанию */
-  --bg-primary: #0f0f12;
-  --bg-secondary: #16161d;
-  --bg-tertiary: #20202b;
-  --card-bg: rgba(22, 22, 29, 0.7);
-  --card-border: rgba(255, 255, 255, 0.08);
+  --bg-primary: #0b0f19;
+  --bg-secondary: #151d30;
+  --bg-tertiary: #1e293b;
+  --card-bg: rgba(21, 29, 48, 0.9);
+  --card-border: rgba(0, 95, 255, 0.15);
   
-  --primary: #8b5cf6;
-  --primary-hover: #7c3aed;
-  --primary-glow: rgba(139, 92, 246, 0.3);
+  --primary: #005fff;
+  --primary-hover: #3388ff;
+  --primary-glow: rgba(0, 95, 255, 0.25);
   
-  --secondary: #3b82f6;
-  --success: #10b981;
-  --success-glow: rgba(16, 185, 129, 0.2);
+  --secondary: #3388ff;
+  --success: #00d15a;
+  --success-glow: rgba(0, 209, 90, 0.25);
   --warning: #f59e0b;
   --danger: #ef4444;
   --danger-hover: #dc2626;
@@ -32,9 +32,9 @@
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.4);
   
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
   --radius-full: 9999px;
   
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -48,15 +48,15 @@
 
 /* Светлая тема (при необходимости переключения) */
 [data-theme="light"] {
-  --bg-primary: #f8fafc;
+  --bg-primary: #f7f9fc;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f1f5f9;
-  --card-bg: rgba(255, 255, 255, 0.8);
-  --card-border: rgba(0, 0, 0, 0.06);
+  --bg-tertiary: #e2e8f0;
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --card-border: rgba(0, 95, 255, 0.12);
   
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-glow: rgba(99, 102, 241, 0.15);
+  --primary: #005fff;
+  --primary-hover: #0c2c5e;
+  --primary-glow: rgba(0, 95, 255, 0.15);
   
   --text-primary: #0f172a;
   --text-secondary: #475569;
@@ -83,7 +83,6 @@ body {
   overflow-x: hidden;
   height: 100vh;
   height: 100dvh;
-  height: -webkit-fill-available; /* Поддержка Safari мобильного */
   display: flex;
   flex-direction: column;
   transition: background-color 0.3s ease;
@@ -117,8 +116,7 @@ input, button, textarea, select {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  background: rgba(10, 10, 12, 0.85); /* Более темный полупрозрачный фон для мобильных экранов */
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -142,7 +140,7 @@ input, button, textarea, select {
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 500px;
-  max-height: 85vh;
+  max-height: 85%;
   overflow-y: auto;
   padding: 24px;
   box-shadow: var(--shadow-lg);
@@ -151,6 +149,10 @@ input, button, textarea, select {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.modal-content > * {
+  flex-shrink: 0;
 }
 
 .modal-overlay.active .modal-content {
@@ -200,16 +202,22 @@ input, button, textarea, select {
 
 .form-input {
   background: var(--bg-tertiary);
-  border: 1px solid var(--card-border);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   outline: none;
+  color: var(--text-primary);
   transition: var(--transition-fast);
+}
+
+[data-theme="light"] .form-input {
+  border: 1.5px solid rgba(0, 0, 0, 0.35);
 }
 
 .form-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-glow);
+  box-shadow: 0 0 0 3px rgba(0, 95, 255, 0.3);
+  background: var(--bg-secondary);
 }
 
 .form-row {
@@ -324,21 +332,38 @@ input, button, textarea, select {
 }
 
 .sidebar-header {
-  padding: 24px 20px;
+  padding: 28px 20px;
+  background: linear-gradient(135deg, #0c2c5e 0%, #005fff 100%);
+  color: #ffffff;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid var(--card-border);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  border-bottom: none;
+  box-shadow: inset 0 -10px 20px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar-header h2 {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
+  font-weight: 700;
   letter-spacing: -0.5px;
 }
 
 .sidebar-header .logo-icon {
-  color: var(--primary);
-  font-size: 1.75rem;
+  color: #ffffff;
+  font-size: 2.2rem;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 8px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-subtitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.85;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 /* Список дней */
@@ -445,8 +470,7 @@ input, button, textarea, select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(22, 22, 29, 0.5);
-  backdrop-filter: blur(16px);
+  background: var(--bg-secondary); /* Убираем полупрозрачность с размытием для стабильной отрисовки */
   border-bottom: 1px solid var(--card-border);
   z-index: 10;
   padding-top: var(--safe-top);
@@ -546,13 +570,12 @@ input, button, textarea, select {
 
 /* --- КАРТОЧКА ПАСПОРТА ДНЯ --- */
 .day-passport-card {
-  background: var(--card-bg);
+  background: var(--bg-secondary); /* Заменяем полупрозрачный фон с размытием на сплошной */
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   overflow: hidden;
   transition: var(--transition);
-  backdrop-filter: blur(12px);
   flex-shrink: 0; /* Предотвращает сплющивание карточки во flex-контейнере на iOS/Android */
 }
 
@@ -709,7 +732,7 @@ input, button, textarea, select {
 
 /* Отдельная карточка операции */
 .operation-card {
-  background: var(--card-bg);
+  background: var(--bg-secondary); /* Заменяем полупрозрачный фон с размытием на сплошной */
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
   padding: 16px 20px;
@@ -720,7 +743,6 @@ input, button, textarea, select {
   transition: var(--transition);
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(12px);
 }
 
 .operation-card:hover {
@@ -738,6 +760,26 @@ input, button, textarea, select {
   width: 4px;
   height: 100%;
   background: var(--text-muted);
+}
+
+.operation-card.active {
+  border: 2px solid rgba(0, 209, 90, 0.5);
+  animation: activeCardPulse 1.6s infinite ease-in-out;
+}
+
+@keyframes activeCardPulse {
+  0% {
+    border-color: rgba(0, 209, 90, 0.3);
+    box-shadow: 0 4px 14px rgba(0, 209, 90, 0.15);
+  }
+  50% {
+    border-color: rgba(0, 209, 90, 0.85);
+    box-shadow: 0 4px 24px rgba(0, 209, 90, 0.4);
+  }
+  100% {
+    border-color: rgba(0, 209, 90, 0.3);
+    box-shadow: 0 4px 14px rgba(0, 209, 90, 0.15);
+  }
 }
 
 .operation-card.active::before {
@@ -854,31 +896,108 @@ input, button, textarea, select {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.05);
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
   padding-top: 12px;
 }
 
 .op-resource-chip {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-sm);
-  padding: 4px 8px;
+  padding: 4px 10px;
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  font-weight: 600;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 6px;
+  transition: var(--transition-fast);
 }
 
 .op-resource-chip span.material-icons-outlined {
-  font-size: 14px;
-  color: var(--primary);
+  font-size: 13px;
 }
 
-.op-resource-chip.workers span.material-icons-outlined { color: var(--secondary); }
-.op-resource-chip.equipment span.material-icons-outlined { color: var(--warning); }
-.op-resource-chip.materials span.material-icons-outlined { color: #ec4899; }
-.op-resource-chip.notes span.material-icons-outlined { color: var(--text-muted); }
+/* Исполнители (Workers) */
+.op-resource-chip.workers {
+  background-color: #0c4a6e;
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+.op-resource-chip.workers span.material-icons-outlined {
+  color: #38bdf8;
+}
+[data-theme="light"] .op-resource-chip.workers {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid rgba(3, 105, 161, 0.15);
+}
+[data-theme="light"] .op-resource-chip.workers span.material-icons-outlined {
+  color: #0369a1;
+}
+
+/* Инструменты (Tools) */
+.op-resource-chip.tools {
+  background-color: #78350f;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+.op-resource-chip.tools span.material-icons-outlined {
+  color: #fbbf24;
+}
+[data-theme="light"] .op-resource-chip.tools {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid rgba(180, 83, 9, 0.15);
+}
+[data-theme="light"] .op-resource-chip.tools span.material-icons-outlined {
+  color: #b45309;
+}
+
+/* Спецтехника (Equipment) */
+.op-resource-chip.equipment {
+  background-color: #4c1d95;
+  color: #c084fc;
+  border: 1px solid rgba(192, 132, 252, 0.35);
+}
+.op-resource-chip.equipment span.material-icons-outlined {
+  color: #c084fc;
+}
+[data-theme="light"] .op-resource-chip.equipment {
+  background-color: #f3e8ff;
+  color: #6d28d9;
+  border: 1px solid rgba(109, 40, 217, 0.15);
+}
+[data-theme="light"] .op-resource-chip.equipment span.material-icons-outlined {
+  color: #6d28d9;
+}
+
+/* Материалы (Materials) */
+.op-resource-chip.materials {
+  background-color: #064e3b;
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+.op-resource-chip.materials span.material-icons-outlined {
+  color: #34d399;
+}
+[data-theme="light"] .op-resource-chip.materials {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid rgba(4, 120, 87, 0.15);
+}
+[data-theme="light"] .op-resource-chip.materials span.material-icons-outlined {
+  color: #047857;
+}
+
+/* Количество людей (People count) & Заметки (Notes) */
+.op-resource-chip.people-count,
+.op-resource-chip.notes {
+  background-color: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  border: 1px solid var(--card-border);
+}
+.op-resource-chip.people-count span.material-icons-outlined,
+.op-resource-chip.notes span.material-icons-outlined {
+  color: var(--text-muted);
+}
 
 /* Панель управления операцией */
 .op-actions-row {
@@ -986,8 +1105,7 @@ input, button, textarea, select {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.7); /* Более плотный темный оверлей вместо размытия */
   z-index: 95;
   opacity: 0;
   pointer-events: none;
@@ -1183,7 +1301,7 @@ input, button, textarea, select {
   
   .modal-content {
     padding: 20px;
-    max-height: 90vh;
+    max-height: 90%;
   }
 
   /* Предотвращение зума при фокусе на iOS */
