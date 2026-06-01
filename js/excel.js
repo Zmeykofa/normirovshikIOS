@@ -69,6 +69,82 @@ class ExcelExporter {
       .join(", ");
   }
 
+  // Вспомогательная функция для форматирования и группировки машинистов
+  formatMachinistsForExcel(equipmentStr) {
+    if (!equipmentStr) return "";
+    const eqStrings = equipmentStr.split(/,(?![^\[]*\])/).map(e => e.trim()).filter(Boolean);
+    if (eqStrings.length === 0) return "";
+
+    const counts = {};
+    eqStrings.forEach(e => {
+      let position = "";
+      let grade = "";
+
+      const match = e.match(/\[([^\]]+)\]/);
+      if (match) {
+        const inner = match[1];
+        const details = inner.split(",").map(x => x.trim()).filter(Boolean);
+        
+        const isFio = (str) => {
+          return /[А-ЯA-Z]\.[А-ЯA-Z]?\./.test(str) || (str.split(" ").length > 1 && /[А-ЯA-Z]/.test(str));
+        };
+
+        if (details.length === 3) {
+          position = details[1];
+          grade = details[2];
+        } else if (details.length === 2) {
+          const hasDigit0 = /\d/.test(details[0]);
+          const hasDigit1 = /\d/.test(details[1]);
+          if (hasDigit0) {
+            grade = details[0];
+            if (!isFio(details[1])) position = details[1];
+          } else if (hasDigit1) {
+            grade = details[1];
+            if (!isFio(details[0])) position = details[0];
+          } else {
+            if (!isFio(details[0])) position = details[0];
+            if (!isFio(details[1])) position = details[1];
+          }
+        } else if (details.length === 1) {
+          const val = details[0];
+          if (/\d/.test(val)) {
+            grade = val;
+          } else if (!isFio(val)) {
+            position = val;
+          }
+        }
+      }
+
+      let posFormatted = position.trim();
+      if (posFormatted) {
+        posFormatted = posFormatted.charAt(0).toUpperCase() + posFormatted.slice(1);
+      }
+
+      let gradeFormatted = grade.trim();
+      if (gradeFormatted) {
+        const gradeClean = gradeFormatted.replace(/\s*р\.?$/, "");
+        gradeFormatted = gradeClean + "р.";
+      }
+
+      let key = "";
+      if (posFormatted && gradeFormatted) {
+        key = `${posFormatted} ${gradeFormatted}`;
+      } else if (posFormatted) {
+        key = posFormatted;
+      } else if (gradeFormatted) {
+        key = gradeFormatted;
+      } else {
+        key = "Машинист";
+      }
+
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .map(([key, count]) => `${key} - ${count} чел.`)
+      .join(", ");
+  }
+
   // Вспомогательная функция форматирования даты в DD.MM.YYYY HH:mm
   formatDateTime(timestamp) {
     if (!timestamp) return "";
@@ -153,7 +229,7 @@ class ExcelExporter {
       const workersCount = op.workers ? op.workers.split(/,(?![^(]*\))/).filter(w => w.trim().length > 0).length : 0;
 
       // Обработка техники
-      const equipmentItems = op.equipment ? op.equipment.split(",").filter(e => e.trim().length > 0).map(e => e.trim()) : [];
+      const equipmentItems = op.equipment ? op.equipment.split(/,(?![^\[]*\])/).filter(e => e.trim().length > 0).map(e => e.trim()) : [];
       const equipmentCount = equipmentItems.length;
       const equipmentNames = equipmentItems.map(item => {
         const bracketIndex = item.indexOf(" [");
@@ -162,16 +238,7 @@ class ExcelExporter {
         }
         return item.split("=")[0].trim();
       }).join(", ");
-      const machinistsList = equipmentItems.map(item => {
-        const bracketIndex = item.indexOf(" [");
-        if (bracketIndex !== -1) {
-          const eqName = item.substring(0, bracketIndex).trim();
-          const details = item.substring(bracketIndex + 2, item.length - 1).trim();
-          return `${eqName}: ${details}`;
-        }
-        const parts = item.split("=");
-        return (parts.length > 1 && parts[1].trim().length > 0) ? `${parts[0].trim()}: ${parts[1].trim()}` : null;
-      }).filter(Boolean).join(", ");
+      const machinistsList = this.formatMachinistsForExcel(op.equipment || "");
 
       return [
         op.name || "",
