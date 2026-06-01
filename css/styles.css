@@ -1209,11 +1209,10 @@ input, button, textarea, select {
     justify-content: center;
   }
 
-  /* Внутренний скролл для паспорта дня, чтобы он не занимал весь экран */
+  /* Паспорт дня на мобильных: естественная высота без вложенной прокрутки */
   .passport-body {
-    max-height: 250px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    max-height: none;
+    overflow: visible;
     padding-bottom: 12px;
   }
 }
