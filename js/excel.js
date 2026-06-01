@@ -1,4 +1,74 @@
 class ExcelExporter {
+  // Вспомогательная функция для форматирования и группировки исполнителей
+  formatWorkersForExcel(workersStr) {
+    if (!workersStr) return "";
+    const workerStrings = workersStr.split(",").map(w => w.trim()).filter(Boolean);
+    if (workerStrings.length === 0) return "";
+
+    const counts = {};
+    workerStrings.forEach(w => {
+      let position = "";
+      let grade = "";
+
+      const match = w.match(/\(([^)]+)\)/);
+      if (match) {
+        const details = match[1].split(",").map(s => s.trim());
+        if (details.length >= 2) {
+          position = details[0];
+          grade = details[1];
+        } else if (details.length === 1) {
+          const val = details[0];
+          if (/\d/.test(val)) {
+            grade = val;
+          } else {
+            position = val;
+          }
+        }
+      } else {
+        if (w.includes(",")) {
+          const details = w.split(",").map(s => s.trim());
+          position = details[0];
+          grade = details[1];
+        } else {
+          const trimmed = w.trim();
+          if (/\d/.test(trimmed)) {
+            grade = trimmed;
+          } else {
+            position = trimmed;
+          }
+        }
+      }
+
+      let posFormatted = position.trim();
+      if (posFormatted) {
+        posFormatted = posFormatted.charAt(0).toUpperCase() + posFormatted.slice(1);
+      }
+
+      let gradeFormatted = grade.trim();
+      if (gradeFormatted) {
+        const gradeClean = gradeFormatted.replace(/\s*р\.?$/, "");
+        gradeFormatted = gradeClean + "р.";
+      }
+
+      let key = "";
+      if (posFormatted && gradeFormatted) {
+        key = `${posFormatted} ${gradeFormatted}`;
+      } else if (posFormatted) {
+        key = posFormatted;
+      } else if (gradeFormatted) {
+        key = gradeFormatted;
+      } else {
+        key = "Сотрудник";
+      }
+
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .map(([key, count]) => `${key} - ${count} чел.`)
+      .join(", ");
+  }
+
   // Вспомогательная функция форматирования даты в DD.MM.YYYY HH:mm
   formatDateTime(timestamp) {
     if (!timestamp) return "";
@@ -62,8 +132,6 @@ class ExcelExporter {
       "Название", 
       "Начало", 
       "Конец", 
-      "Длит. (сек)", 
-      "Длит. (чч:мм:сс)", 
       "Люди", 
       "Исполнители", 
       "Кол-во рабочих", 
@@ -79,16 +147,6 @@ class ExcelExporter {
     const sortedOps = [...operations].sort((a, b) => a.startEpoch - b.startEpoch);
 
     const opsRows = sortedOps.map(op => {
-      // Расчет длительности
-      const stopTime = op.stopEpoch || Date.now();
-      const durationMillis = stopTime - op.startEpoch;
-      const durationSec = Math.floor(durationMillis / 1000);
-
-      const hours = Math.floor(durationSec / 3600);
-      const minutes = Math.floor((durationSec % 3600) / 60);
-      const seconds = durationSec % 60;
-      const durFormatted = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-
       const stopText = op.stopEpoch ? this.formatTimeOnly(op.stopEpoch) : "Активна";
 
       // Подсчет рабочих
@@ -119,10 +177,8 @@ class ExcelExporter {
         op.name || "",
         this.formatTimeOnly(op.startEpoch),
         stopText,
-        durationSec,
-        durFormatted,
         Number(op.people || 0),
-        op.workers || "",
+        this.formatWorkersForExcel(op.workers || ""),
         workersCount,
         op.tools || "",
         equipmentNames,
@@ -140,8 +196,6 @@ class ExcelExporter {
       { wch: 25 }, // Название
       { wch: 12 }, // Начало
       { wch: 12 }, // Конец
-      { wch: 12 }, // Длит (сек)
-      { wch: 16 }, // Длит (чч:мм:сс)
       { wch: 8 },  // Люди
       { wch: 30 }, // Исполнители
       { wch: 15 }, // Кол-во рабочих
