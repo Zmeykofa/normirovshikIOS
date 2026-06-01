@@ -69,6 +69,38 @@ class ExcelExporter {
       .join(", ");
   }
 
+  // Вспомогательная функция для форматирования и группировки техники
+  formatEquipmentForExcel(equipmentStr) {
+    if (!equipmentStr) return "";
+    const eqStrings = equipmentStr.split(/,(?![^\[]*\])/).map(e => e.trim()).filter(Boolean);
+    if (eqStrings.length === 0) return "";
+
+    const counts = {};
+    eqStrings.forEach(e => {
+      let name = e;
+      const bracketIndex = e.indexOf(" [");
+      if (bracketIndex !== -1) {
+        name = e.substring(0, bracketIndex).trim();
+      } else if (e.includes("=")) {
+        name = e.split("=")[0].trim();
+      }
+
+      let nameFormatted = name.trim();
+      if (nameFormatted) {
+        nameFormatted = nameFormatted.charAt(0).toUpperCase() + nameFormatted.slice(1);
+      } else {
+        nameFormatted = "Техника";
+      }
+
+      counts[nameFormatted] = (counts[nameFormatted] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => `${name} - ${count} шт.`)
+      .join(", ");
+  }
+
   // Вспомогательная функция для форматирования и группировки машинистов
   formatMachinistsForExcel(equipmentStr) {
     if (!equipmentStr) return "";
@@ -132,7 +164,7 @@ class ExcelExporter {
       } else if (posFormatted) {
         key = posFormatted;
       } else if (gradeFormatted) {
-        key = gradeFormatted;
+        key = `Машинист ${gradeFormatted}`;
       } else {
         key = "Машинист";
       }
@@ -231,13 +263,7 @@ class ExcelExporter {
       // Обработка техники
       const equipmentItems = op.equipment ? op.equipment.split(/,(?![^\[]*\])/).filter(e => e.trim().length > 0).map(e => e.trim()) : [];
       const equipmentCount = equipmentItems.length;
-      const equipmentNames = equipmentItems.map(item => {
-        const bracketIndex = item.indexOf(" [");
-        if (bracketIndex !== -1) {
-          return item.substring(0, bracketIndex).trim();
-        }
-        return item.split("=")[0].trim();
-      }).join(", ");
+      const equipmentNames = this.formatEquipmentForExcel(op.equipment || "");
       const machinistsList = this.formatMachinistsForExcel(op.equipment || "");
 
       return [
