@@ -553,6 +553,7 @@ input, button, textarea, select {
   overflow: hidden;
   transition: var(--transition);
   backdrop-filter: blur(12px);
+  flex-shrink: 0; /* Предотвращает сплющивание карточки во flex-контейнере на iOS/Android */
 }
 
 .passport-header {
@@ -672,6 +673,10 @@ input, button, textarea, select {
   display: flex;
   justify-content: flex-end;
   margin-top: 4px;
+}
+
+.operations-section {
+  flex-shrink: 0;
 }
 
 /* --- СПИСОК ОПЕРАЦИЙ (Operations) --- */

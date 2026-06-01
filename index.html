@@ -570,7 +570,7 @@
     // Регистрация Service Worker для оффлайн работы PWA с форсированием обновлений
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=11')
+        navigator.serviceWorker.register('sw.js?v=12')
           .then(reg => {
             console.log('Service Worker успешно зарегистрирован!', reg.scope);
             // Форсируем обновление при каждом посещении
