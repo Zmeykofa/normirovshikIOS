@@ -661,14 +661,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.dayPassportCard.style.display = "block";
     DOM.fabAddOperation.style.display = "flex";
 
-    // На мобильных экранах скрываем тело паспорта по умолчанию для разгрузки интерфейса
-    if (window.innerWidth <= 768) {
-      DOM.passportBody.classList.add("collapsed");
-      DOM.passportToggleBtn.querySelector("span").textContent = "expand_more";
-    } else {
-      DOM.passportBody.classList.remove("collapsed");
-      DOM.passportToggleBtn.querySelector("span").textContent = "expand_less";
-    }
+    // Паспорт дня по умолчанию открыт на всех экранах для удобства просмотра
+    DOM.passportBody.classList.remove("collapsed");
+    DOM.passportToggleBtn.querySelector("span").textContent = "expand_less";
   }
 
   // --- УПРАВЛЕНИЕ ПАСПОРТОМ ДНЯ (Passport) ---
