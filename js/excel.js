@@ -2,7 +2,7 @@ class ExcelExporter {
   // Вспомогательная функция для форматирования и группировки исполнителей
   formatWorkersForExcel(workersStr) {
     if (!workersStr) return "";
-    const workerStrings = workersStr.split(",").map(w => w.trim()).filter(Boolean);
+    const workerStrings = workersStr.split(/,(?![^(]*\))/).map(w => w.trim()).filter(Boolean);
     if (workerStrings.length === 0) return "";
 
     const counts = {};
@@ -150,7 +150,7 @@ class ExcelExporter {
       const stopText = op.stopEpoch ? this.formatTimeOnly(op.stopEpoch) : "Активна";
 
       // Подсчет рабочих
-      const workersCount = op.workers ? op.workers.split(",").filter(w => w.trim().length > 0).length : 0;
+      const workersCount = op.workers ? op.workers.split(/,(?![^(]*\))/).filter(w => w.trim().length > 0).length : 0;
 
       // Обработка техники
       const equipmentItems = op.equipment ? op.equipment.split(",").filter(e => e.trim().length > 0).map(e => e.trim()) : [];
