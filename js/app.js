@@ -1,35 +1,53 @@
 // Главная логика PWA приложения "Нормировщик"
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Офлайн проверка даты для блокировки (01.08.2026)
-  const currentDate = new Date();
-  const blockDate = new Date(2026, 7, 1); // 7 - это август (0-indexed)
-  if (currentDate >= blockDate) {
-    document.body.innerHTML = `
-      <div style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        width: 100vw;
-        background-color: #0b0f19;
-        color: #f3f4f6;
-        font-family: 'Outfit', sans-serif;
-        text-align: center;
-        padding: 24px;
-        box-sizing: border-box;
-      ">
-        <span class="material-icons-outlined" style="font-size: 5rem; color: #ef4444; margin-bottom: 20px;">block</span>
-        <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 12px; color: #f3f4f6;">Срок действия версии истек</h1>
-        <p style="font-size: 1.1rem; color: #9ca3af; max-width: 500px; line-height: 1.6; margin-bottom: 24px;">
-          Эта версия приложения была заблокирована 01.08.2026. Пожалуйста, обратитесь к администратору или обновите приложение до актуальной версии.
-        </p>
-        <div style="font-size: 0.85rem; color: #6b7280;">Код ошибки: EXP-20260801</div>
-      </div>
-    `;
-    return;
+  // Функция проверки даты блокировки (01.08.2026)
+  function checkDateAndBlock() {
+    const currentDate = new Date();
+    const blockDate = new Date(2026, 7, 1); // 7 - это август (0-indexed)
+    if (currentDate >= blockDate) {
+      document.body.innerHTML = `
+        <div style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          width: 100vw;
+          background-color: #0b0f19;
+          color: #f3f4f6;
+          font-family: 'Outfit', sans-serif;
+          text-align: center;
+          padding: 24px;
+          box-sizing: border-box;
+          position: fixed;
+          top: 0;
+          left: 0;
+          z-index: 999999;
+        ">
+          <span class="material-icons-outlined" style="font-size: 5rem; color: #ef4444; margin-bottom: 20px;">block</span>
+          <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 12px; color: #f3f4f6;">Срок действия версии истек</h1>
+          <p style="font-size: 1.1rem; color: #9ca3af; max-width: 500px; line-height: 1.6; margin-bottom: 24px;">
+            Эта версия приложения была заблокирована 01.08.2026. Пожалуйста, обратитесь к администратору или обновите приложение до актуальной версии.
+          </p>
+          <div style="font-size: 0.85rem; color: #6b7280;">Код ошибки: EXP-20260801</div>
+        </div>
+      `;
+      return true;
+    }
+    return false;
   }
+
+  // Запуск проверки при загрузке
+  if (checkDateAndBlock()) return;
+
+  // Слушатели для повторной проверки в реальном времени
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      checkDateAndBlock();
+    }
+  });
+  setInterval(checkDateAndBlock, 30000); // Проверка каждые 30 секунд
 
   // --- СОСТОЯНИЕ ПРИЛОЖЕНИЯ (State) ---
   const state = {
