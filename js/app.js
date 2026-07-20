@@ -1,10 +1,10 @@
 // Главная логика PWA приложения "Нормировщик"
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Функция проверки даты блокировки (01.08.2026)
+  // Функция проверки даты блокировки (31.08.2026)
   function checkDateAndBlock() {
     const currentDate = new Date();
-    const blockDate = new Date(2026, 7, 1); // 7 - это август (0-indexed)
+    const blockDate = new Date(2026, 7, 31); // 7 - это август (0-indexed)
     if (currentDate >= blockDate) {
       document.body.innerHTML = `
         <div style="
@@ -28,9 +28,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           <span class="material-icons-outlined" style="font-size: 5rem; color: #ef4444; margin-bottom: 20px;">block</span>
           <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 12px; color: #f3f4f6;">Срок действия версии истек</h1>
           <p style="font-size: 1.1rem; color: #9ca3af; max-width: 500px; line-height: 1.6; margin-bottom: 24px;">
-            Эта версия приложения была заблокирована 01.08.2026. Пожалуйста, обратитесь к администратору или обновите приложение до актуальной версии.
+            Эта версия приложения была заблокирована 31.08.2026. Пожалуйста, обратитесь к администратору или обновите приложение до актуальной версии.
           </p>
-          <div style="font-size: 0.85rem; color: #6b7280;">Код ошибки: EXP-20260801</div>
+          <div style="font-size: 0.85rem; color: #6b7280;">Код ошибки: EXP-20260831</div>
         </div>
       `;
       return true;
@@ -106,6 +106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     pWorkersTags: document.getElementById("pWorkersTags"),
     pToolsTags: document.getElementById("pToolsTags"),
     pEquipmentTags: document.getElementById("pEquipmentTags"),
+    pMachinistsTags: document.getElementById("pMachinistsTags"),
     pMaterialsTags: document.getElementById("pMaterialsTags"),
     
     // Хронометраж
@@ -736,19 +737,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.pBrigadeNumber.textContent = d.brigadeNumber || "—";
     DOM.pBrigadeLeader.textContent = d.brigadeLeader || "—";
     
-    renderTags(DOM.pWorkersTags, d.workersList);
+    renderTags(DOM.pWorkersTags, d.workersList, false, true);
     renderTags(DOM.pToolsTags, d.toolsList);
-    renderTags(DOM.pEquipmentTags, d.equipmentList);
+    renderTags(DOM.pEquipmentTags, d.equipmentList, true, false);
+    renderTags(DOM.pMachinistsTags, extractMachinistsForTags(d.equipmentList), false, true);
     renderTags(DOM.pMaterialsTags, d.materialsList);
   }
 
-  function renderTags(container, listString) {
+  function renderTags(container, listString, isEquipment = false, isWorkers = false) {
     container.innerHTML = "";
     if (!listString) {
       container.textContent = "—";
       return;
     }
-    const tags = listString.split(",").map(t => t.trim()).filter(t => t.length > 0);
+    let tags;
+    if (isWorkers) {
+      tags = listString.split(/,(?![^(]*\))/).map(t => t.trim()).filter(t => t.length > 0);
+    } else if (isEquipment) {
+      tags = listString.split(/,(?![^\[]*\])/).map(t => t.trim()).filter(t => t.length > 0);
+    } else {
+      tags = listString.split(",").map(t => t.trim()).filter(t => t.length > 0);
+    }
     if (tags.length === 0) {
       container.textContent = "—";
       return;
@@ -759,6 +768,92 @@ document.addEventListener("DOMContentLoaded", async () => {
       span.textContent = tag;
       container.appendChild(span);
     });
+  }
+
+  function extractMachinistsForTags(equipmentStr) {
+    if (!equipmentStr) return "";
+    const eqStrings = equipmentStr.split(/,(?![^\[]*\])/).map(e => e.trim()).filter(Boolean);
+    if (eqStrings.length === 0) return "";
+
+    const result = [];
+    eqStrings.forEach(e => {
+      const match = e.match(/\[([^\]]+)\]/);
+      if (match) {
+        const inner = match[1];
+        const details = inner.split(",").map(x => x.trim()).filter(Boolean);
+        
+        const isFio = (str) => {
+          return /[А-ЯA-Z]\.[А-ЯA-Z]?\./.test(str) || (str.split(" ").length > 1 && /[А-ЯA-Z]/.test(str));
+        };
+
+        let machinistName = "";
+        let position = "";
+        let grade = "";
+
+        if (details.length === 3) {
+          machinistName = details[0];
+          position = details[1];
+          grade = details[2];
+        } else if (details.length === 2) {
+          const hasDigit0 = /\d/.test(details[0]);
+          const hasDigit1 = /\d/.test(details[1]);
+          if (hasDigit0) {
+            grade = details[0];
+            if (isFio(details[1])) {
+              machinistName = details[1];
+            } else {
+              position = details[1];
+            }
+          } else if (hasDigit1) {
+            grade = details[1];
+            if (isFio(details[0])) {
+              machinistName = details[0];
+            } else {
+              position = details[0];
+            }
+          } else {
+            if (isFio(details[0])) machinistName = details[0]; else position = details[0];
+            if (isFio(details[1])) machinistName = details[1]; else position = details[1];
+          }
+        } else if (details.length === 1) {
+          const val = details[0];
+          if (/\d/.test(val)) {
+            grade = val;
+          } else if (isFio(val)) {
+            machinistName = val;
+          } else {
+            position = val;
+          }
+        }
+
+        let label = "";
+        if (machinistName) {
+          const info = [];
+          if (position) info.push(position);
+          if (grade) {
+            let g = grade;
+            if (/^\d+$/.test(g)) g += " разряд";
+            info.push(g);
+          }
+          if (info.length > 0) {
+            label = `${machinistName} (${info.join(", ")})`;
+          } else {
+            label = machinistName;
+          }
+        } else {
+          const info = [];
+          if (position) info.push(position);
+          if (grade) {
+            let g = grade;
+            if (/^\d+$/.test(g)) g += " разряд";
+            info.push(g);
+          }
+          label = info.join(", ");
+        }
+        if (label) result.push(label);
+      }
+    });
+    return result.join(", ");
   }
 
   DOM.editPassportBtn.addEventListener("click", () => {

@@ -340,6 +340,17 @@ class ExcelExporter {
         }
         return parts.join(" ").trim();
       }).join(", "))],
+      ["Машинисты (список шаблонов)", this.formatMachinistsForExcel(day.equipmentList || equipmentList.map(item => {
+        const parts = [item.name];
+        const details = [];
+        if (item.machinist) details.push(item.machinist);
+        if (item.position) details.push(item.position);
+        if (item.grade) details.push(item.grade);
+        if (details.length > 0) {
+          parts.push(`[${details.join(", ")}]`);
+        }
+        return parts.join(" ").trim();
+      }).join(", "))],
       ["Материалы (список шаблонов)", day.materialsList || materialsList.map(m => m.name).join(", ")]
     ];
 
