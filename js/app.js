@@ -79,6 +79,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     // Хронометраж
     operationsList: document.getElementById("operationsList"),
+    operationsWarningBanner: document.getElementById("operationsWarningBanner"),
+    operationsWarningText: document.getElementById("operationsWarningText"),
     emptyOperationsState: document.getElementById("emptyOperationsState"),
     operationsCount: document.getElementById("operationsCount"),
     fabAddOperation: document.getElementById("fabAddOperation"),
@@ -111,6 +113,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     editOperationModalTitle: document.getElementById("editOperationModalTitle"),
     eoName: document.getElementById("eoName"),
     eoPeople: document.getElementById("eoPeople"),
+    eoDurationPreview: document.getElementById("eoDurationPreview"),
+    eoStartTime: document.getElementById("eoStartTime"),
+    eoStartMinus1m: document.getElementById("eoStartMinus1m"),
+    eoStartPlus1m: document.getElementById("eoStartPlus1m"),
+    eoStopTime: document.getElementById("eoStopTime"),
+    eoStopMinus1m: document.getElementById("eoStopMinus1m"),
+    eoStopPlus1m: document.getElementById("eoStopPlus1m"),
+    eoStopNowBtn: document.getElementById("eoStopNowBtn"),
+    eoStatusActiveLabel: document.getElementById("eoStatusActiveLabel"),
+    eoTimeError: document.getElementById("eoTimeError"),
     eoWorkersContainer: document.getElementById("eoWorkersContainer"),
     eoToolsContainer: document.getElementById("eoToolsContainer"),
     eoEquipmentContainer: document.getElementById("eoEquipmentContainer"),
@@ -199,11 +211,68 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.error("Ошибка инициализации приложения:", err);
   }
 
+  // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ РУЧНОЙ КОРРЕКЦИИ ВРЕМЕНИ ---
+  function epochToDatetimeLocal(epoch) {
+    if (!epoch) return "";
+    const d = new Date(epoch);
+    const pad = (n) => String(n).padStart(2, "0");
+    const year = d.getFullYear();
+    const month = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  function datetimeLocalToEpoch(str) {
+    if (!str) return null;
+    const time = new Date(str).getTime();
+    return isNaN(time) ? null : time;
+  }
+
+  function updateEditOpDurationPreview() {
+    const start = datetimeLocalToEpoch(DOM.eoStartTime.value);
+    const stop = DOM.eoStopTime.value ? datetimeLocalToEpoch(DOM.eoStopTime.value) : null;
+    
+    if (!start) {
+      DOM.eoDurationPreview.textContent = "00:00:00";
+      DOM.eoTimeError.style.display = "none";
+      return;
+    }
+
+    if (stop !== null) {
+      if (stop < start) {
+        DOM.eoTimeError.style.display = "block";
+        DOM.eoDurationPreview.textContent = "Ошибка";
+        DOM.eoDurationPreview.style.color = "#ef4444";
+        return;
+      }
+      DOM.eoTimeError.style.display = "none";
+      DOM.eoDurationPreview.style.color = "var(--text-primary)";
+      const durSec = Math.floor((stop - start) / 1000);
+      const h = Math.floor(durSec / 3600);
+      const m = Math.floor((durSec % 3600) / 60);
+      const s = durSec % 60;
+      DOM.eoDurationPreview.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    } else {
+      DOM.eoTimeError.style.display = "none";
+      DOM.eoDurationPreview.style.color = "var(--success)";
+      const durSec = Math.max(0, Math.floor((Date.now() - start) / 1000));
+      const h = Math.floor(durSec / 3600);
+      const m = Math.floor((durSec % 3600) / 60);
+      const s = durSec % 60;
+      DOM.eoDurationPreview.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+  }
+
   // --- СИСТЕМНЫЕ ТАЙМЕРЫ (Real-time updates) ---
   function startTickingInterval() {
     if (state.timerInterval) clearInterval(state.timerInterval);
     state.timerInterval = setInterval(() => {
       const activeCards = document.querySelectorAll(".operation-card.active");
+      let hasLongRunning = false;
+      let longOpName = "";
+
       activeCards.forEach(card => {
         const opId = card.dataset.id;
         const op = state.operations.find(o => String(o.id) === String(opId));
@@ -216,8 +285,35 @@ document.addEventListener("DOMContentLoaded", async () => {
           
           const timerEl = card.querySelector(".op-timer");
           if (timerEl) timerEl.textContent = formatted;
+
+          if (durationSec >= 45 * 60) {
+            hasLongRunning = true;
+            if (!longOpName) longOpName = op.name;
+            card.classList.add("warning-long");
+            if (timerEl) timerEl.style.color = "#f59e0b";
+            if (!card.querySelector(".op-warning-badge")) {
+              const badge = document.createElement("div");
+              badge.className = "op-warning-badge";
+              badge.title = "Операция идет больше 45 минут";
+              badge.innerHTML = '<span class="material-icons-outlined" style="font-size:12px;">warning</span> &gt; 45 мин';
+              const durBlock = card.querySelector(".op-duration-block");
+              if (durBlock) durBlock.appendChild(badge);
+            }
+          }
         }
       });
+
+      if (hasLongRunning && DOM.operationsWarningBanner) {
+        DOM.operationsWarningBanner.style.display = "flex";
+        DOM.operationsWarningText.textContent = `Внимание: операция «${escapeHtml(longOpName)}» выполняется более 45 минут! Не забудьте завершить.`;
+      }
+
+      // Если открыт диалог редактирования активной операции, обновляем превью времени
+      if (DOM.editOperationModal && DOM.editOperationModal.classList.contains("active") && state.editingOperationId) {
+        if (!DOM.eoStopTime.value) {
+          updateEditOpDurationPreview();
+        }
+      }
     }, 1000);
   }
 
@@ -896,11 +992,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (state.operations.length === 0) {
       DOM.operationsList.style.display = "none";
       DOM.emptyOperationsState.style.display = "flex";
+      if (DOM.operationsWarningBanner) DOM.operationsWarningBanner.style.display = "none";
       return;
     }
     
     DOM.operationsList.style.display = "flex";
     DOM.emptyOperationsState.style.display = "none";
+
+    const now = Date.now();
+    const longRunningOps = state.operations.filter(op => {
+      const stopTime = op.stopEpoch || now;
+      return Math.floor((stopTime - op.startEpoch) / 1000) >= 45 * 60;
+    });
+
+    if (DOM.operationsWarningBanner) {
+      if (longRunningOps.length > 0) {
+        const activeLong = longRunningOps.filter(o => o.stopEpoch === null);
+        DOM.operationsWarningBanner.style.display = "flex";
+        if (activeLong.length > 0) {
+          DOM.operationsWarningText.textContent = `Внимание: операция «${escapeHtml(activeLong[0].name)}» длится более 45 минут! Проверьте хронометраж.`;
+        } else {
+          DOM.operationsWarningText.textContent = `Внимание: в списке есть операции длительностью более 45 минут.`;
+        }
+      } else {
+        DOM.operationsWarningBanner.style.display = "none";
+      }
+    }
     
     state.operations.forEach(op => {
       const activeClass = op.stopEpoch === null ? "active" : "";
@@ -913,9 +1030,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       const startTimeStr = formatTimeOnly(op.startEpoch);
       const stopTimeStr = op.stopEpoch ? formatTimeOnly(op.stopEpoch) : "Активна";
+
+      const isLongWarning = durationSec >= 45 * 60;
+      const warningClass = isLongWarning ? "warning-long" : "";
       
       const card = document.createElement("div");
-      card.className = `operation-card ${activeClass}`;
+      card.className = `operation-card ${activeClass} ${warningClass}`;
       card.dataset.id = op.id;
       
       let resourcesHtml = "";
@@ -1000,10 +1120,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
           </div>
           <div class="op-duration-block">
-            <div class="op-timer">${durFormatted}</div>
+            <div class="op-timer" style="${isLongWarning ? 'color: #f59e0b;' : ''}">${durFormatted}</div>
             <div class="op-status-badge ${op.stopEpoch === null ? "active" : "completed"}">
               ${op.stopEpoch === null ? '<span class="pulse-dot"></span> Идет' : "Завершено"}
             </div>
+            ${isLongWarning ? '<div class="op-warning-badge" title="Операция идет больше 45 минут"><span class="material-icons-outlined" style="font-size:12px;">warning</span> &gt; 45 мин</div>' : ''}
           </div>
         </div>
         
@@ -1019,13 +1140,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       `;
       
       if (op.stopEpoch === null) {
-        card.querySelector(".stop-btn").addEventListener("click", () => stopOperation(op));
+        card.querySelector(".stop-btn").addEventListener("click", () => {
+          triggerHaptic("medium");
+          stopOperation(op);
+        });
       }
       
-      card.querySelector(".edit-btn").addEventListener("click", () => openEditOperationModal(op));
-      card.querySelector(".split-btn").addEventListener("click", () => splitOperation(op));
-      card.querySelector(".repeat-btn").addEventListener("click", () => repeatOperation(op));
+      card.querySelector(".edit-btn").addEventListener("click", () => {
+        triggerHaptic("light");
+        openEditOperationModal(op);
+      });
+      card.querySelector(".split-btn").addEventListener("click", () => {
+        triggerHaptic("medium");
+        splitOperation(op);
+      });
+      card.querySelector(".repeat-btn").addEventListener("click", () => {
+        triggerHaptic("medium");
+        repeatOperation(op);
+      });
       card.querySelector(".delete-btn").addEventListener("click", () => {
+        triggerHaptic("medium");
         state.deletingOperationId = op.id;
         DOM.deleteOperationMessage.innerHTML = `Вы уверены, что хотите удалить операцию <strong>"${escapeHtml(op.name)}"</strong>?`;
         openModal(DOM.deleteOperationModal);
@@ -1038,6 +1172,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // --- ОПЕРАЦИИ: СОЗДАНИЕ, ОСТАНОВКА, РАЗДЕЛЕНИЕ, ПОВТОРЕНИЕ ---
 
   async function triggerAddOperation() {
+    triggerHaptic("light");
     if (!state.currentDay) return;
     
     const newOp = {
@@ -1145,7 +1280,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.exporter.exportToExcel(state.currentDay, state.operations, state.staff, state.tools, state.equipment, state.materials);
   });
 
-  // --- ДИАЛОГ: РЕДАКТИРОВАНИЕ ОПЕРАЦИИ, ЧЕКБОКСЫ И ШАБЛОНЫ ---
   function openEditOperationModal(op) {
     state.editingOperationId = op.id;
     DOM.editOperationModalTitle.textContent = `Редактирование: ${escapeHtml(op.name)}`;
@@ -1153,6 +1287,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     DOM.eoName.value = op.name || "";
     DOM.eoPeople.value = op.people || 0;
     DOM.eoNotes.value = op.notes || "";
+
+    // Хронометраж и ручная коррекция времени
+    DOM.eoStartTime.value = epochToDatetimeLocal(op.startEpoch);
+    DOM.eoStopTime.value = op.stopEpoch ? epochToDatetimeLocal(op.stopEpoch) : "";
+    if (op.stopEpoch === null) {
+      DOM.eoStatusActiveLabel.style.display = "inline";
+    } else {
+      DOM.eoStatusActiveLabel.style.display = "none";
+    }
+    updateEditOpDurationPreview();
     
     // --- 1. Обработка Исполнителей (Сотрудники) ---
     renderWorkersMultiselect(op.workers);
@@ -1373,10 +1517,80 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Кнопки коррекции времени (+/-1м и Стоп)
+  DOM.eoStartMinus1m.addEventListener("click", () => {
+    triggerHaptic("light");
+    let epoch = datetimeLocalToEpoch(DOM.eoStartTime.value);
+    if (!epoch) epoch = Date.now();
+    epoch -= 60 * 1000;
+    DOM.eoStartTime.value = epochToDatetimeLocal(epoch);
+    updateEditOpDurationPreview();
+  });
+
+  DOM.eoStartPlus1m.addEventListener("click", () => {
+    triggerHaptic("light");
+    let epoch = datetimeLocalToEpoch(DOM.eoStartTime.value);
+    if (!epoch) epoch = Date.now();
+    epoch += 60 * 1000;
+    DOM.eoStartTime.value = epochToDatetimeLocal(epoch);
+    updateEditOpDurationPreview();
+  });
+
+  DOM.eoStopMinus1m.addEventListener("click", () => {
+    triggerHaptic("light");
+    let epoch = datetimeLocalToEpoch(DOM.eoStopTime.value);
+    if (!epoch) epoch = Date.now();
+    epoch -= 60 * 1000;
+    DOM.eoStopTime.value = epochToDatetimeLocal(epoch);
+    DOM.eoStatusActiveLabel.style.display = "none";
+    updateEditOpDurationPreview();
+  });
+
+  DOM.eoStopPlus1m.addEventListener("click", () => {
+    triggerHaptic("light");
+    let epoch = datetimeLocalToEpoch(DOM.eoStopTime.value);
+    if (!epoch) epoch = Date.now();
+    epoch += 60 * 1000;
+    DOM.eoStopTime.value = epochToDatetimeLocal(epoch);
+    DOM.eoStatusActiveLabel.style.display = "none";
+    updateEditOpDurationPreview();
+  });
+
+  DOM.eoStopNowBtn.addEventListener("click", () => {
+    triggerHaptic("medium");
+    DOM.eoStopTime.value = epochToDatetimeLocal(Date.now());
+    DOM.eoStatusActiveLabel.style.display = "none";
+    updateEditOpDurationPreview();
+  });
+
+  DOM.eoStartTime.addEventListener("input", updateEditOpDurationPreview);
+  DOM.eoStopTime.addEventListener("input", () => {
+    if (DOM.eoStopTime.value) {
+      DOM.eoStatusActiveLabel.style.display = "none";
+    }
+    updateEditOpDurationPreview();
+  });
+
   // Сохранение отредактированной операции
   DOM.saveOperationBtn.addEventListener("click", async () => {
     const op = state.operations.find(o => o.id === state.editingOperationId);
     if (!op) return;
+
+    const startEpochVal = datetimeLocalToEpoch(DOM.eoStartTime.value);
+    const stopEpochVal = DOM.eoStopTime.value ? datetimeLocalToEpoch(DOM.eoStopTime.value) : null;
+
+    if (!startEpochVal) {
+      alert("Укажите корректное время начала операции!");
+      return;
+    }
+
+    if (stopEpochVal !== null && stopEpochVal < startEpochVal) {
+      DOM.eoTimeError.style.display = "block";
+      alert("Время окончания не может быть раньше времени начала!");
+      return;
+    }
+
+    triggerHaptic("medium");
     
     // 1. Собираем сотрудников
     const checkedWorkers = Array.from(DOM.eoWorkersContainer.querySelectorAll("input[type='checkbox']:checked")).map(cb => cb.dataset.name);
@@ -1403,6 +1617,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const updated = {
       ...op,
       name: DOM.eoName.value.trim() || "Операция",
+      startEpoch: startEpochVal,
+      stopEpoch: stopEpochVal,
       people: parseInt(DOM.eoPeople.value) || 0,
       workers: finalWorkers,
       tools: finalTools,

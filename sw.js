@@ -1,4 +1,4 @@
-const CACHE_NAME = "normirovshik-v18";
+const CACHE_NAME = "normirovshik-v19";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -44,6 +44,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   // Обрабатываем только GET-запросы
   if (event.request.method !== "GET") return;
+  // Не кэшируем и не перехватываем APK файлы инсталлятора
+  if (event.request.url.endsWith(".apk")) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

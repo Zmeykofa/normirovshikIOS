@@ -48,6 +48,9 @@
         <button id="openDirectoriesBtn" class="btn btn-text" style="width: 100%;">
           <span class="material-icons-outlined">storage</span> Справочники БД
         </button>
+        <a href="normirovshik.apk" download="НормировщикПроМакс2.apk" class="btn btn-text" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; border: 1px solid rgba(255,255,255,0.12); padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; color: #60a5fa; background: rgba(59, 130, 246, 0.08);">
+          <span class="material-icons-outlined" style="font-size: 18px;">android</span> Скачать APK для Android (v7.3)
+        </a>
       </div>
     </aside>
 
@@ -68,6 +71,10 @@
             <span class="material-icons-outlined">navigate_next</span>
             <span id="unfinishedStatusText">0/0</span>
           </div>
+          <!-- Кнопка скачивания APK Android -->
+          <a href="normirovshik.apk" download="НормировщикПроМакс2.apk" class="export-btn" title="Скачать APK для Android (v7.3)" style="display: flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text-primary);">
+            <span class="material-icons-outlined">android</span>
+          </a>
           <!-- Кнопка сохранения в Excel -->
           <button id="exportExcelBtn" class="export-btn" title="Сохранить отчет в Excel">
             <span class="material-icons-outlined">save_alt</span>
@@ -164,6 +171,12 @@
             <span id="operationsCount" class="operations-count">0</span>
           </div>
           
+          <!-- Предупреждение о затянувшихся операциях (> 45 мин) -->
+          <div id="operationsWarningBanner" class="warning-banner" style="display: none; background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
+            <span class="material-icons-outlined" style="font-size: 20px; color: #f59e0b; flex-shrink: 0;">warning</span>
+            <span id="operationsWarningText" style="flex: 1;">Внимание: операция длится более 45 минут! Проверьте хронометраж.</span>
+          </div>
+
           <div id="operationsList" class="operations-list">
             <!-- Сюда динамически рендерятся операции -->
           </div>
@@ -333,6 +346,44 @@
           <div class="form-group">
             <label for="eoPeople">Количество людей</label>
             <input type="number" id="eoPeople" class="form-input" min="0">
+          </div>
+        </div>
+
+        <!-- Блок ручной коррекции времени (Хронометраж) -->
+        <div class="time-edit-section" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 4px;">
+              <span class="material-icons-outlined" style="font-size: 18px;">schedule</span> Коррекция времени и хронометраж
+            </span>
+            <span id="eoDurationPreview" style="font-size: 0.85rem; font-family: monospace; font-weight: 700; color: var(--text-primary); background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">00:00:00</span>
+          </div>
+
+          <!-- Время начала -->
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label for="eoStartTime" style="font-size: 0.8rem; color: var(--text-secondary);">Время начала:</label>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <input type="datetime-local" id="eoStartTime" class="form-input" style="flex: 1; font-size: 0.85rem;">
+              <button type="button" id="eoStartMinus1m" class="btn btn-sm" style="padding: 6px 10px; font-size: 0.75rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);" title="Минус 1 минута">-1м</button>
+              <button type="button" id="eoStartPlus1m" class="btn btn-sm" style="padding: 6px 10px; font-size: 0.75rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);" title="Плюс 1 минута">+1м</button>
+            </div>
+          </div>
+
+          <!-- Время окончания -->
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label for="eoStopTime" style="font-size: 0.8rem; color: var(--text-secondary);">Время окончания:</label>
+              <span id="eoStatusActiveLabel" style="font-size: 0.75rem; color: #10b981; display: none;">● Идет прямо сейчас</span>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <input type="datetime-local" id="eoStopTime" class="form-input" style="flex: 1; font-size: 0.85rem;">
+              <button type="button" id="eoStopMinus1m" class="btn btn-sm" style="padding: 6px 10px; font-size: 0.75rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);" title="Минус 1 минута">-1м</button>
+              <button type="button" id="eoStopPlus1m" class="btn btn-sm" style="padding: 6px 10px; font-size: 0.75rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);" title="Плюс 1 минута">+1м</button>
+              <button type="button" id="eoStopNowBtn" class="btn btn-sm" style="padding: 6px 10px; font-size: 0.75rem; background: var(--danger); color: white;" title="Зафиксировать текущее время">Стоп</button>
+            </div>
+          </div>
+
+          <div id="eoTimeError" style="display: none; color: #ef4444; font-size: 0.8rem; background: rgba(239, 68, 68, 0.12); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.25);">
+            ⚠️ Время окончания не может быть раньше времени начала!
           </div>
         </div>
 
